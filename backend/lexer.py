@@ -1,151 +1,93 @@
+# fsm_lexer.py
+
 from tokens import Token as T
-from errors import InvalidIdentifierError, InvalidDelimiterError, LexerError, InvalidIntegerError, InvalidPointError, InvalidSymbolError
+from errors import (
+    InvalidIdentifierError,
+    LexerError,
+    InvalidIntegerError,
+    InvalidPointError,
+    InvalidSymbolError
+)
+from states import LexerState
+from delims import *
+from constants import ATOMS
 
 class Lexer:
     def __init__(self, input_code):
+        # Normalize newlines
         self.code = input_code.replace('\r\n', '\n').replace('\r', '\n')
-        self.position = 0  
-        self.line = 1       
-        self.column = 1     
-        self.errors = []     # empty list to store errors
-        self.symbols = ['+', '-', '*', '/', '%', '=', '!', '>', '<', '&', '|', '{', '}', '(', ')', '[', ']', ':', ',', ';']
-        self.valid_delimiters_identifier = [' ', '\n', '\t', ';', ',', ')', '}', '(', '{', '[', ']', ':', '=', '+', '-', '*', '/', '%', '!', '>', '<', '&', '|']
-        self.valid_delimiters_numeric = [' ', '\t', '+', '-', '*', '/', '%',  ',', '==', '!=', '<', '>', ')', ']', '}', ';', ':', '|', '&',]
-        self.valid_delimiters_dict = {
-            'get': [ ' ', '(' ],
-            'show': [ ' ', '(' ],
-            'integer': [ ' ', '(' ],
-            'point': [ ' ', '(' ],
-            'texts': [ ' ', '(' ],
-            'state': [ ' ', '(' ],
-            'group': [ ' ' ],
-            'fixed': [ ' ' ],
-            'checkif': [ ' ', '(' ],
-            'recheck': [ ' ', '(' ],
-            'otherwise': [ ' ', '\n', '\t', '{' ],
-            'switch': [ ' ', '(' ],
-            'case': [ ' ' ],
-            'default': [ ' ', ':' ],
-            'each': [ ' ', '(' ],
-            'repeat': [ ' ', '(' ],
-            'do': [ ' ', '{' ],
-            'exit': [ ' ', ';' ],
-            'next': [ ' ', ';' ],
-            'func': [ ' ' ],
-            'throw': [ ' ' ],
-            'empty': [ ' ', ';',',',':' ],
-            'STATELITERAL': [ ' ', ')', '&', ',', ';', '}', '|', '=', '!' ],
-            # 'NO': [ ' ', ')', '&&', '!=', ',', ';', '}', '||', '==' ],
-        }
-        self.valid_delimiters_symbol_dict = {
-            '=':  [' ', '"', '(', '{', '~', 'Y', 'N'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '==': [' ', '(', '~', '"', 'Y', 'N'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '+':  [' ', '(', '~', '"'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '++': [' ', ')', ';', '}', ',', '<'], 
-            '+=': [' ', '('] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '-':  [' ', '(', '~'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '--': [' ', ')', ';', '}', ','], 
-            '-=': [' ', '('] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '*':  [' ', '(', '~'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '*=': [' ', '('] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '/':  [' ', '(', '~'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '/=': [' ', '('] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '%':  [' ', '(', '~'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '!':  [' ', '(', 'Y', 'N'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '!=': [' ', '(', '~', '"', 'Y', 'N'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '>':  [' ', '(', '~'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '>=': [' ', '(', '~'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '<':  [' ', '(', '~'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '<=': [' ', '(', '~'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '&&': [' ', '(', 'Y', 'N', '!'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '||': [' ', '(', 'Y', 'N'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '{':  [' ', '\n', '\t', '"', 'Y', 'N', '~', '(','{','}'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '}':  [' ', '\n', '\t', '=', ';', 'checkif', 'recheck', 'otherwise', '{','}', ','], 
-            '(':  [' ', '~', '"', '(', 'Y', 'N',')'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            ')':  [' ', '\n', '\t', ';', ')', '{', '+', '-', '*', '/', '%', '==', '!=', '<', '>', '<=', '>=', '&', '|', '!', ',', '}'], 
-            '[':  [' ', '"'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            ']':  [' ', ')', ';', '+', '-', '*', '/', '%', '=', '+=', '-=', '/=', '*=', '==', '!=', '<', '>', '<=', '>='], 
-            ':':  [' ', '\n', '\t', '{', '~', '"', 'Y', 'N'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            '~':  [' ', '('] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            ',':  [' ', '\n', '\t', '"', '(', '~', 'Y', 'N'] + list('abcdefghijklmnopqrstuvwxyz0123456789'), 
-            ';':  [' ', '\n', '\t', '#'] + list('abcdefghijklmnopqrstuvwxyz'),
-        }
+        self.position = 0
+        self.line = 1
+        self.column = 1
+
+        # This is the FSM’s current state
+        self.current_state = LexerState.INITIAL
+
+        # Buffers and outputs
+        self.current_lexeme = ""   # Accumulates characters for the current token
+        self.errors = []           # Collect errors here
+        self.token_buffer = []
+
+        # Symbol sets and delimiter definitions
+        self.symbols = [
+            '+', '-', '*', '/', '%', '=', '!', '>', '<', '&', '|',
+            '{', '}', '(', ')', '[', ']', ':', ',', ';'
+        ]
+
         self.current_char = self.code[self.position] if self.code else None
-        
-    # Method to move to the next character in the code
+
+    #--------------------------------------------------------------------------
+    # Low-level helpers
+    #--------------------------------------------------------------------------
+
     def advance(self):
-        # If the current character is a newline
+        """
+        Move to the next character, updating line and column numbers.
+        """
         if self.current_char == '\n':
-            self.line += 1      
-            self.column = 0    
+            self.line += 1
+            self.column = 0
 
-        self.position += 1      # Move to the next character in the code
-        self.column += 1        # Move to the next column
+        self.position += 1
+        self.column += 1
 
-        # If the position is within the bounds of the code, update current_char to the next character
         if self.position < len(self.code):
             self.current_char = self.code[self.position]
         else:
-            # If we've reached the end of the code, set current_char to None
-            self.current_char = None  # End of input
+            self.current_char = None
 
-        # If current_char is None, it means we've reached the end of the input code
-        if self.current_char is None:
-            return None
+    def peek_next_char(self, offset=1):
+        """
+        Look ahead in the code without consuming characters.
+        """
+        next_pos = self.position + offset
+        if next_pos < len(self.code):
+            return self.code[next_pos]
+        return None
 
-    def tokenize_space(self):
-        start_line = self.line                 
-        start_column = self.column             
-        space = ''                              
-        count = 0                              
-
-        # Loop to consume spaces (up to 4)
-        while self.current_char == ' ' and count < 4:
-            space += self.current_char          
-            self.advance()                       
-            count += 1                          
-
-        # 4 spaces = 1 tab token
-        if count == 4:
-            return T('TAB', space, start_line, start_column)  
-        else:
-            return T('SPACE', space, start_line, start_column) 
+    #--------------------------------------------------------------------------
+    # Keyword checking
+    #--------------------------------------------------------------------------
+    def keyword_check(self, value: str):
         
-    def tokenize_newline(self):
-        start_line = self.line                 
-        start_column = self.column            
-        newline = "\\n"                         
-        self.advance()                          
-        return T('NEWLINE', newline, start_line, start_column)
-
-    def tokenize_comment(self):
-        start_line = self.line                 
-        start_column = self.column             
-        comment = ''                             # empty string to accumulate the comment text
-
-        # Loop to collect characters until a newline or the end of the input
-        while self.current_char is not None and self.current_char != '\n':
-            comment += self.current_char         # Add the current character to the comment string
-            self.advance()                       # Advance to the next character
-
-        # Return a SINGLE_LINE_COMMENT token with the accumulated comment text
-        return T('COMMENT', comment, start_line, start_column)
-
-    def tokenize_keyword(self, value):
-
+        # ----- Check if it starts with 'c' -----
         if value[0] == 'c':
             if len(value) == 4 and value[1] == 'a' and value[2] == 's' and value[3] == 'e':
                 return 'case'
             elif len(value) == 7 and value[1] == 'h' and value[2] == 'e' and value[3] == 'c' and value[4] == 'k' and value[5] == 'i' and value[6] == 'f':
                 return 'checkif'
 
-        elif value[0] == 'd':
+        # ----- Starts with 'd' -----
+        if value[0] == 'd':
+            # Could be "default" or "do"
             if len(value) == 7 and value[1] == 'e' and value[2] == 'f' and value[3] == 'a' and value[4] == 'u' and value[5] == 'l' and value[6] == 't':
                 return 'default'
             elif len(value) == 2 and value[1] == 'o':
                 return 'do'
 
-        elif value[0] == 'e':
+        # ----- Starts with 'e' -----
+        if value[0] == 'e':
+            # Could be "each", "empty", or "exit"
             if len(value) == 4 and value[1] == 'a' and value[2] == 'c' and value[3] == 'h':
                 return 'each'
             elif len(value) == 5 and value[1] == 'm' and value[2] == 'p' and value[3] == 't' and value[4] == 'y':
@@ -153,41 +95,57 @@ class Lexer:
             elif len(value) == 4 and value[1] == 'x' and value[2] == 'i' and value[3] == 't':
                 return 'exit'
 
-        elif value[0] == 'f':
+        # ----- Starts with 'f' -----
+        if value[0] == 'f':
+            # Could be "fixed", "func"
             if len(value) == 5 and value[1] == 'i' and value[2] == 'x' and value[3] == 'e' and value[4] == 'd':
                 return 'fixed'
             elif len(value) == 4 and value[1] == 'u' and value[2] == 'n' and value[3] == 'c':
                 return 'func'
 
-        elif value[0] == 'g':
+        # ----- Starts with 'g' -----
+        if value[0] == 'g':
+            # Could be "get", "group"
             if len(value) == 3 and value[1] == 'e' and value[2] == 't':
                 return 'get'
             elif len(value) == 5 and value[1] == 'r' and value[2] == 'o' and value[3] == 'u' and value[4] == 'p':
                 return 'group'
 
-        elif value[0] == 'i':
+        # ----- Starts with 'i' -----
+        if value[0] == 'i':
+            # Could be "integer"
             if len(value) == 7 and value[1] == 'n' and value[2] == 't' and value[3] == 'e' and value[4] == 'g' and value[5] == 'e' and value[6] == 'r':
                 return 'integer'
 
-        elif value[0] == 'n':
+        # ----- Starts with 'n' -----
+        if value[0] == 'n':
+            # Could be "next"
             if len(value) == 4 and value[1] == 'e' and value[2] == 'x' and value[3] == 't':
                 return 'next'
 
-        elif value[0] == 'o':
+        # ----- Starts with 'o' -----
+        if value[0] == 'o':
+            # Could be "otherwise"
             if len(value) == 9 and value[1] == 't' and value[2] == 'h' and value[3] == 'e' and value[4] == 'r' and value[5] == 'w' and value[6] == 'i' and value[7] == 's' and value[8] == 'e':
                 return 'otherwise'
 
-        elif value[0] == 'p':
+        # ----- Starts with 'p' -----
+        if value[0] == 'p':
+            # Could be "point"
             if len(value) == 5 and value[1] == 'o' and value[2] == 'i' and value[3] == 'n' and value[4] == 't':
                 return 'point'
 
-        elif value[0] == 'r':
+        # ----- Starts with 'r' -----
+        if value[0] == 'r':
+            # Could be "recheck", "repeat"
             if len(value) == 7 and value[1] == 'e' and value[2] == 'c' and value[3] == 'h' and value[4] == 'e' and value[5] == 'c' and value[6] == 'k':
                 return 'recheck'
             elif len(value) == 6 and value[1] == 'e' and value[2] == 'p' and value[3] == 'e' and value[4] == 'a' and value[5] == 't':
                 return 'repeat'
 
-        elif value[0] == 's':
+        # ----- Starts with 's' -----
+        if value[0] == 's':
+            # Could be "show", "state", "switch"
             if len(value) == 4 and value[1] == 'h' and value[2] == 'o' and value[3] == 'w':
                 return 'show'
             elif len(value) == 5 and value[1] == 't' and value[2] == 'a' and value[3] == 't' and value[4] == 'e':
@@ -195,579 +153,578 @@ class Lexer:
             elif len(value) == 6 and value[1] == 'w' and value[2] == 'i' and value[3] == 't' and value[4] == 'c' and value[5] == 'h':
                 return 'switch'
 
-        elif value[0] == 't':
+        # ----- Starts with 't' -----
+        if value[0] == 't':
+            # Could be "texts", "throw"
             if len(value) == 5 and value[1] == 'e' and value[2] == 'x' and value[3] == 't' and value[4] == 's':
                 return 'texts'
             elif len(value) == 5 and value[1] == 'h' and value[2] == 'r' and value[3] == 'o' and value[4] == 'w':
                 return 'throw'
 
-        elif value[0] == 'Y':
+        # ----- Starts with 'Y' -----
+        if value[0] == 'Y':
+            # Could be "YES"
             if len(value) == 3 and value[1] == 'E' and value[2] == 'S':
                 return 'STATELITERAL'
 
-        elif value[0] == 'N':
+        # ----- Starts with 'N' -----
+        if value[0] == 'N':
+            # Could be "NO"
             if len(value) == 2 and value[1] == 'O':
                 return 'STATELITERAL'
 
+        # If nothing matched, it's not a recognized keyword
         return None
 
-    def invalid_identifier(self):
-        start_line = self.line                   
-        start_column = self.column               
-        value = ''                               # Initialize an empty string to accumulate the identifier
-
-        # Loop to collect characters that are part of a valid identifier
-        while self.current_char is not None and (self.current_char.isalnum() or self.current_char == '_'):
-            value += self.current_char           # Add the current character to the identifier string
-            self.advance()                       # Advance to the next character
-
-        # Create an error object for the invalid identifier
-        error = InvalidIdentifierError( value, start_line, start_column, message=f"Invalid identifier '{value}' must start with a lowercase letter." )
-        self.errors.append(error)             
-
-        return T('INVALID', value, start_line, start_column)
-
-    def tokenize_identifier(self):
-        start_line = self.line                   
-        start_column = self.column               
-        value = ''                               
-
-        if not self.current_char.islower():
-            self.advance()                       # Move to the next character
-            return T('INVALID', value, start_line, start_column)
-
-        # Continue consuming valid identifier characters
-        while self.current_char is not None and (self.current_char.isalnum() or self.current_char == '_'):
-            value += self.current_char           # Add the current character to the identifier string
-            self.advance()                       # Advance to the next character
-
-        return T('IDENTIFIER', value, start_line, start_column)
-
-    def tokenize_identifier_or_keyword(self):
+    #--------------------------------------------------------------------------
+    # Main public method: get_next_token
+    #--------------------------------------------------------------------------
+    def get_next_token(self):
+        """
+        The core of the FSM. It advances character by character,
+        uses self.current_state to decide how to handle them,
+        and transitions between states until a token is formed or an error occurs.
+        
+        IMPORTANT: If an error occurs, we return an 'INVALID' token instead of None.
+                   If end-of-file, we return None.
+        """
+        
+        self.current_lexeme = ""
         start_line = self.line
         start_column = self.column
-        value = ''
-    
-        # Collect all alphanumeric characters and underscores
-        while self.current_char is not None and (self.current_char.isalnum() or self.current_char == '_'):
-            value += self.current_char
+
+        # If we're at the end of the input
+        if self.current_char is None:
+            return None  # No more tokens
+
+        # Enter the main loop: we read characters until we produce a token
+        while self.current_char is not None:
+            if self.current_state == LexerState.INITIAL:
+                # Decide which specialized state to go into, based on current_char
+                if self.current_char.isspace():
+                    if self.current_char == ' ':
+                        self.current_state = LexerState.READING_SPACE
+                    elif self.current_char == '\n':
+                        self.current_state = LexerState.READING_NEWLINE
+                    elif self.current_char == '\t':
+                        self.current_state = LexerState.READING_SPACE
+                    else:
+                        # Some other whitespace char, skip
+                        self.advance()
+                        return self.get_next_token()
+                elif self.current_char == '#':
+                    self.current_state = LexerState.READING_COMMENT
+                elif self.current_char.isalpha() or self.current_char == '_':
+                    self.current_state = LexerState.READING_IDENTIFIER
+                elif self.current_char.isdigit():
+                    self.current_state = LexerState.READING_INT
+                elif self.current_char == '~':
+                    self.current_state = LexerState.READING_NEGATIVE_INT
+                elif self.current_char == '"':
+                    self.current_state = LexerState.READING_STRING
+                elif self.current_char == '.':
+                    # Now treat '.' as invalid symbol
+                    error = InvalidSymbolError('.', self.line, self.column)
+                    self.errors.append(error)
+                    invalid_char = self.current_char
+                    self.advance()
+                    return T('INVALID', invalid_char, start_line, start_column, error="Invalid symbol")
+                elif self.current_char in self.symbols:
+                    self.current_state = LexerState.READING_SYMBOL
+                else:
+                    # Invalid symbol => produce error, return an 'INVALID' token
+                    error = InvalidSymbolError(self.current_char, self.line, self.column)
+                    self.errors.append(error)
+                    invalid_char = self.current_char
+                    self.advance()
+                    # CHANGED: Return INVALID token instead of None
+                    return T('INVALID', invalid_char, start_line, start_column, error="Invalid symbol")
+
+                continue
+
+            #--- Handle each state’s logic
+            if self.current_state == LexerState.READING_SPACE:
+                return self.handle_state_reading_space(start_line, start_column)
+
+            if self.current_state == LexerState.READING_NEWLINE:
+                return self.handle_state_reading_newline(start_line, start_column)
+
+            if self.current_state == LexerState.READING_COMMENT:
+                return self.handle_state_reading_comment(start_line, start_column)
+
+            if self.current_state == LexerState.READING_IDENTIFIER:
+                return self.handle_state_reading_identifier(start_line, start_column)
+
+            if self.current_state == LexerState.READING_INT:
+                return self.handle_state_reading_int(start_line, start_column)
+
+            if self.current_state == LexerState.READING_NEGATIVE_INT:
+                return self.handle_state_reading_negative_int(start_line, start_column)
+
+            if self.current_state == LexerState.READING_STRING:
+                return self.handle_state_reading_string(start_line, start_column)
+
+            if self.current_state == LexerState.READING_SYMBOL:
+                return self.handle_state_reading_symbol(start_line, start_column)
+
+        return None  # End of code reached inside the loop
+
+    #--------------------------------------------------------------------------
+    # State Handling Routines
+    #--------------------------------------------------------------------------
+
+    def handle_state_reading_space(self, start_line, start_column):
+        single_char = self.current_char
+        self.advance()
+        self.current_state = LexerState.INITIAL
+        return T('WHITESPACE', single_char, start_line, start_column)
+
+    def handle_state_reading_newline(self, start_line, start_column):
+        value = "\\n"
+        self.advance()  # consume '\n'
+        self.current_state = LexerState.INITIAL
+        return T('NEWLINE', value, start_line, start_column)
+
+    def handle_state_reading_comment(self, start_line, start_column):
+        comment_value = ""
+        self.advance()  # skip '#'
+        while self.current_char is not None and self.current_char != '\n':
+            comment_value += self.current_char
             self.advance()
-    
-        # Attempt to match the collected value against keywords
-        token_type = self.tokenize_keyword(value)
+
+        self.current_state = LexerState.INITIAL
+        return T('COMMENT', comment_value, start_line, start_column)
+
+    def handle_state_reading_identifier(self, start_line, start_column):
+        value = ""
+        while self.current_char is not None:
+            # Keep reading alphanumeric or underscore
+            if self.current_char in ATOMS['alphanumeric'] or self.current_char == '_':
+                value += self.current_char
+                self.advance()
+            else:
+                # Stop reading identifier and leave the next character for further tokenizing
+                break
+
+        token_type = self.keyword_check(value)
         if token_type:
-            valid_delimiters = self.valid_delimiters_dict.get(token_type, [])
-            if self.current_char is not None and self.current_char not in valid_delimiters:
-                error_message = f"Invalid delimiter after keyword '{value}': '{self.current_char}'"
-                error = InvalidSymbolError(self.current_char, self.line, self.column)
-                error.message = error_message
-                self.errors.append(error)
-                self.advance()  
-                return None  
+            # Check the valid delimiter for that keyword
+            if self.current_char is not None:
+                valid_delims = valid_delimiters_dict.get(token_type, [])
+                two_char = self.current_char
+                if self.peek_next_char():
+                    two_char += self.peek_next_char()
+                if self.current_char not in valid_delims and two_char not in valid_delims:
+                    msg = f"Invalid delimiter after keyword '{value}': '{self.current_char}'"
+                    error = InvalidSymbolError(self.current_char, self.line, self.column)
+                    error.message = msg
+                    self.errors.append(error)
+                    self.advance()
+                    self.current_state = LexerState.INITIAL
+                    # CHANGED: Return INVALID token instead of None
+                    return T('INVALID', value, start_line, start_column, error=msg)
+
+            self.current_state = LexerState.INITIAL
             return T(token_type, value, start_line, start_column)
         else:
-            
+            # Not a keyword => treat as identifier
             errors_in_identifier = []
-    
-            if not value[0].islower():
-                errors_in_identifier.append("must start with a lowercase letter")
-    
+            if not value or not value[0].islower():
+                errors_in_identifier.append("must start with a lowercase letter or underscore")
             if len(value) > 20:
                 errors_in_identifier.append("cannot exceed 20 characters")
-    
+
             if errors_in_identifier:
-                # Combine error messages
-                error_message = f"Invalid identifier '{value}': " + "; ".join(errors_in_identifier) + "."
+                error_msg = f"Invalid identifier '{value}': " + "; ".join(errors_in_identifier)
                 error = InvalidIdentifierError(value, start_line, start_column)
-                error.message = error_message
+                error.message = error_msg
                 self.errors.append(error)
-                return None  # Do not return the token
+                self.current_state = LexerState.INITIAL
+                # CHANGED: Return INVALID token
+                return T('INVALID', value, start_line, start_column, error=error_msg)
             else:
-                # Valid identifier
-                token = T('IDENTIFIER', value, start_line, start_column)
-    
-            # Check for invalid delimiter after identifier
-            if self.current_char is not None and self.current_char not in self.valid_delimiters_identifier:
-                error_message = f"Invalid delimiter after identifier '{value}': '{self.current_char}'"
-                error = InvalidSymbolError(self.current_char, self.line, self.column)
-                error.message = error_message
-                self.errors.append(error)
-                self.advance()  # Move past the invalid character
-                return None  # Do not return the token
-    
-            return token
-
-    def tokenize_integer_literal(self):
-        start_line = self.line
-        start_column = self.column
-        value = ''
-
-        while self.current_char is not None and self.current_char.isdigit():
-            value += self.current_char
-            self.advance()
-
-        lexeme = value.lstrip('0') or '0'
-
-        # Enforce maximum of 9 digits
-        if len(lexeme) > 9:
-            error_message = f"Integer literal '{value}' exceeds maximum of 9 digits after removing leading zeros."
-            error = InvalidIntegerError(error_message, start_line, start_column)
-            self.errors.append(error)
-            return None  
-        
-        # Check for invalid delimiter after integer literal
-        if self.current_char is not None and self.current_char not in self.valid_delimiters_numeric:
-            error_message = f"Invalid delimiter after integer literal '{lexeme}': '{self.current_char}'"
-            error = InvalidSymbolError(self.current_char, self.line, self.column)
-            error.message = error_message
-            self.errors.append(error)
-            self.advance()  # Skip the invalid character
-            return None
-
-        return T('INTEGERLITERAL', lexeme, start_line, start_column)
-
-    def tokenize_point_literal(self):
-        start_line = self.line
-        start_column = self.column
-        value = ''
-        has_decimal_point = False
-
-        while self.current_char is not None and (self.current_char.isdigit() or self.current_char == '.'):
-            if self.current_char == '.':
-                if has_decimal_point:
-                    value += self.current_char
-                    self.advance()
-                    while self.current_char is not None and (self.current_char.isdigit() or self.current_char == '.'):
-                        value += self.current_char
-                        self.advance()
-                    error_message = f"Invalid point literal: Multiple decimal points in '{value}'."
-                    error = InvalidPointError(error_message, start_line, start_column)
-                    self.errors.append(error)
-                    return None
-                has_decimal_point = True
-            value += self.current_char
-            self.advance()
-
-        integer_part, fractional_part = value.split('.')
-        integer_part = integer_part.lstrip('0') or '0'
-        fractional_part = fractional_part or '0'
-
-        if len(integer_part) > 9 or len(fractional_part) > 9:
-            error_message = f"Point literal '{value}' exceeds maximum of 9 digits before or after the decimal point."
-            error = InvalidPointError(error_message, start_line, start_column)
-            self.errors.append(error)
-            return None
-
-        lexeme = f"{integer_part}.{fractional_part}"
-
-        if self.current_char is not None and self.current_char not in self.valid_delimiters_numeric:
-            error_message = f"Invalid delimiter after point literal '{lexeme}': '{self.current_char}'"
-            error = InvalidSymbolError(self.current_char, self.line, self.column)
-            error.message = error_message
-            self.errors.append(error)
-            self.advance()
-            return None
-
-        return T('POINTLITERAL', lexeme, start_line, start_column)
-    
-    def tokenize_negative_integer_literal(self):
-        start_line = self.line
-        start_column = self.column
-        self.advance()  # Skip the '~'
-    
-        if self.current_char is not None and self.current_char.isdigit():
-            value = ''
-            while self.current_char is not None and self.current_char.isdigit():
-                value += self.current_char
-                self.advance()
-    
-            if value == '':
-                error_message = f"Invalid negative integer literal: No digits after '~'."
-                error = InvalidIntegerError(error_message, start_line, start_column)
-                self.errors.append(error)
-                return None
-    
-            lexeme = value.lstrip('0') or '0'
-    
-            if len(lexeme) > 9:
-                error_message = f"Negative integer literal '~{value}' exceeds maximum of 9 digits after removing leading zeros."
-                error = InvalidIntegerError(error_message, start_line, start_column)
-                self.errors.append(error)
-                return None
-    
-            full_lexeme = '~' + lexeme
-    
-            if self.current_char is not None and self.current_char not in self.valid_delimiters_numeric:
-                error_message = f"Invalid delimiter after negative integer literal '{full_lexeme}': '{self.current_char}'"
-                error = InvalidSymbolError(self.current_char, self.line, self.column)
-                error.message = error_message
-                self.errors.append(error)
-                self.advance()
-                return None
-    
-            return T('NEGINTEGERLITERAL', full_lexeme, start_line, start_column)
-        else:
-            # Retrieve valid delimiters for '~' from the symbol dictionary
-            valid_delimiters = self.valid_delimiters_symbol_dict.get('~', [])
-            if self.current_char is not None and self.current_char in valid_delimiters:
-                # Treat '~' as a separate symbol token
-                return T('~', '~', start_line, start_column)
-            else:
-                # Invalid usage of '~'
-                if self.current_char is None:
-                    error_message = f"Invalid usage of '~': '~' must be followed by digits or a valid delimiter."
-                else:
-                    error_message = f"Invalid delimiter after '~': '{self.current_char}'"
-                error = InvalidIntegerError(error_message, start_line, start_column)
-                self.errors.append(error)
-                return None
-    
-    def tokenize_negative_point_literal(self):
-        start_line = self.line
-        start_column = self.column
-        self.advance()  # Skip the '~'
-    
-        if self.current_char is None:
-            error_message = f"Invalid negative point literal: '~' not followed by any characters."
-            error = InvalidPointError(error_message, start_line, start_column)
-            self.errors.append(error)
-            return None
-    
-        # Check if the next character starts a point literal
-        if self.current_char.isdigit() or self.current_char == '.':
-            value = ''
-            has_decimal_point = False
-    
-            while self.current_char is not None and (self.current_char.isdigit() or self.current_char == '.'):
-                if self.current_char == '.':
-                    if has_decimal_point:
-                        error_message = f"Invalid negative point literal: Multiple decimal points in '~{value}'."
-                        error = InvalidPointError(error_message, start_line, start_column)
+                # Check delimiter
+                if self.current_char is not None:
+                    two_char = self.current_char
+                    if self.peek_next_char():
+                        two_char += self.peek_next_char()
+                    if (self.current_char not in valid_delimiters_identifier and
+                        two_char not in valid_delimiters_identifier):
+                        error_msg = f"Invalid delimiter after identifier '{value}': '{self.current_char}'"
+                        error = InvalidSymbolError(self.current_char, self.line, self.column)
+                        error.message = error_msg
                         self.errors.append(error)
                         self.advance()
-                        return None
-                    has_decimal_point = True
-                value += self.current_char
-                self.advance()
-    
-            if not has_decimal_point:
-                error_message = f"Invalid negative point literal: Missing decimal point in '~{value}'."
-                error = InvalidPointError(error_message, start_line, start_column)
-                self.errors.append(error)
-                return None
-    
-            # Split into integer and fractional parts
-            if value.startswith('.'):
-                integer_part = '0'
-                fractional_part = value[1:]
-            else:
-                integer_part, fractional_part = value.split('.', 1)
-    
-            integer_part = integer_part.lstrip('0') or '0'
-            fractional_part = fractional_part.rstrip('0') or '0'
-    
-            if len(integer_part) > 9 or len(fractional_part) > 9:
-                error_message = f"Negative point literal '~{value}' exceeds maximum of 9 digits before or after the decimal point."
-                error = InvalidPointError(error_message, start_line, start_column)
-                self.errors.append(error)
-                return None
-    
-            lexeme = f"~{integer_part}.{fractional_part}"
-    
-            if self.current_char is not None and self.current_char not in self.valid_delimiters_numeric:
-                error_message = f"Invalid delimiter after negative point literal '{lexeme}': '{self.current_char}'"
-                error = InvalidSymbolError(self.current_char, self.line, self.column)
-                error.message = error_message
-                self.errors.append(error)
-                self.advance()
-                return None
-    
-            return T('NEGPOINTLITERAL', lexeme, start_line, start_column)
-        else:
-            # Retrieve valid delimiters for '~' from the symbol dictionary
-            valid_delimiters = self.valid_delimiters_symbol_dict.get('~', [])
-            if self.current_char is not None and self.current_char in valid_delimiters:
-                # Treat '~' as a separate symbol token
-                return T('~', '~', start_line, start_column)
-            else:
-                # Invalid usage of '~'
-                if self.current_char is None:
-                    error_message = f"Invalid usage of '~': '~' must be followed by a point literal or a valid delimiter."
-                else:
-                    error_message = f"Invalid delimiter after '~': '{self.current_char}'"
-                error = InvalidPointError(error_message, start_line, start_column)
-                self.errors.append(error)
-                return None
+                        self.current_state = LexerState.INITIAL
+                        return self.get_next_token()
 
-    def tokenize_number(self):
-        start_line = self.line
-        start_column = self.column
-    
-        # Check if the number is followed by a decimal point
-        if '.' in self.collect_number_peek(start=0):
-            return self.tokenize_point_literal()
-    
-        value = ''
-    
+                self.current_state = LexerState.INITIAL
+                return T('IDENTIFIER', value, start_line, start_column)
+
+    def handle_state_reading_int(self, start_line, start_column):
+        value = ""
+        while self.current_char is not None and (self.current_char.isdigit() or self.current_char == '.'):
+            if self.current_char == '.':
+                return self.handle_state_reading_point(value, start_line, start_column)
+            value += self.current_char
+            self.advance()
+
+        lexeme = value.lstrip('0') or '0'
+        if len(lexeme) > 9:
+            error_msg = f"Integer literal '{value}' exceeds max of 9 digits."
+            error = InvalidIntegerError(error_msg, start_line, start_column)
+            self.errors.append(error)
+            self.current_state = LexerState.INITIAL
+            # CHANGED: Return INVALID instead of None
+            return T('INVALID', value, start_line, start_column, error=error_msg)
+
+        # Check delimiter
+        if self.current_char is not None:
+            two_char = self.current_char
+            if self.peek_next_char():
+                two_char += self.peek_next_char()
+            if (self.current_char not in valid_delimiters_numeric and
+                two_char not in valid_delimiters_numeric):
+                error_msg = f"Invalid delimiter after integer '{lexeme}': '{self.current_char}'"
+                error = InvalidSymbolError(self.current_char, self.line, self.column)
+                error.message = error_msg
+                self.errors.append(error)
+                # CHANGED
+                self.current_state = LexerState.INITIAL
+                return self.get_next_token()
+
+        self.current_state = LexerState.INITIAL
+        return T('INTEGERLITERAL', lexeme, start_line, start_column)
+
+    def handle_state_reading_point(self, int_part, start_line, start_column):
+        value = int_part + '.'
+        self.advance()  # consume '.'
+
+        if self.current_char is None or not self.current_char.isdigit():
+            error_msg = "Incomplete point literal."
+            error = InvalidPointError(error_msg, start_line, start_column)
+            self.errors.append(error)
+            self.current_state = LexerState.INITIAL
+            return T('INVALID', value, start_line, start_column, error=error_msg)
+
         while self.current_char is not None and self.current_char.isdigit():
             value += self.current_char
             self.advance()
-    
-        # Check if the number is followed by alphabetic characters
-        if self.current_char is not None and self.current_char.isalpha():
-            invalid_identifier = value
-            while self.current_char is not None and (self.current_char.isalnum() or self.current_char == '_'):
-                invalid_identifier += self.current_char
-                self.advance()
-            error_message = "Invalid identifier; cannot start with a number"
-            error = InvalidIdentifierError(
-                invalid_identifier,
-                start_line,
-                start_column,
-                message=error_message
-            )
-            self.errors.append(error)
-            return None
-    
-        lexeme = value.lstrip('0') or '0'
-    
-        # Enforce maximum of 9 digits
-        if len(lexeme) > 9:
-            error_message = f"Integer literal '{value}' exceeds maximum of 9 digits after removing leading zeros."
-            error = InvalidIntegerError(error_message, start_line, start_column)
-            self.errors.append(error)
-            return None  
-        
-        # Check for invalid delimiter after integer literal
-        if self.current_char is not None and self.current_char not in self.valid_delimiters_numeric:
-            error_message = f"Invalid delimiter after integer literal '{lexeme}': '{self.current_char}'"
-            error = InvalidSymbolError(self.current_char, self.line, self.column)
-            error.message = error_message
-            self.errors.append(error)
-            self.advance()  # Skip the invalid character
-            return None
-    
-        return T('INTEGERLITERAL', lexeme, start_line, start_column)
 
-    def tokenize_negative_number(self):
-        if '.' in self.collect_number_peek(start=1):
-            return self.tokenize_negative_point_literal()
+        if value.endswith('.'):
+            # No fractional part
+            fractional_part = '0'
+            value += '0'
         else:
-            return self.tokenize_negative_integer_literal()
+            fractional_part = value.split('.')[-1]
 
-    def collect_number_peek(self, start=0):
-        # Collect number without advancing, to check if it contains a decimal point
-        pos = self.position + start
-        num_str = ''
-        while pos < len(self.code) and (self.code[pos].isdigit() or self.code[pos] == '.'):
-            num_str += self.code[pos]
-            pos += 1
-        return num_str
+        integer_part = value.split('.')[0].lstrip('0') or '0'
+        fractional_part = fractional_part.rstrip('0') or '0'
 
-    def tokenize_string_literal(self):
-        start_line = self.line
-        start_column = self.column
-        value = '"'
-        self.advance()
-        while self.current_char is not None and self.current_char != '"':
-            if self.current_char == '\n':
-                break
+        if len(integer_part) > 9 or len(fractional_part) > 9:
+            error_msg = f"Point literal '{value}' has too many digits before/after decimal."
+            error = InvalidPointError(error_msg, start_line, start_column)
+            self.errors.append(error)
+            self.current_state = LexerState.INITIAL
+            # CHANGED
+            return T('INVALID', value, start_line, start_column, error=error_msg)
+
+        lexeme = integer_part + '.' + fractional_part
+
+        # Check delimiter
+        if self.current_char is not None:
+            two_char = self.current_char
+            if self.peek_next_char():
+                two_char += self.peek_next_char()
+            if (self.current_char not in valid_delimiters_numeric and
+                two_char not in valid_delimiters_numeric):
+                error_msg = f"Invalid delimiter after point literal '{lexeme}': '{self.current_char}'"
+                error = InvalidSymbolError(self.current_char, self.line, self.column)
+                error.message = error_msg
+                self.errors.append(error)
+                self.current_state = LexerState.INITIAL
+                return self.get_next_token()
+
+        self.current_state = LexerState.INITIAL
+        return T('POINTLITERAL', lexeme, start_line, start_column)
+
+    def handle_state_reading_negative_int(self, start_line, start_column):
+        self.advance()  # consume '~'
+        if self.current_char == '.':
+            return self.handle_state_reading_negative_point("0", start_line, start_column)
+        if self.current_char is not None and self.current_char.isdigit():
+            value = ""
+            while self.current_char is not None and (self.current_char.isdigit() or self.current_char == '.'):
+                if self.current_char == '.':
+                    return self.handle_state_reading_negative_point(value, start_line, start_column)
+                value += self.current_char
+                self.advance()
+
+            if value == "":
+                error_msg = "Invalid negative integer: no digits after '~'."
+                error = InvalidIntegerError(error_msg, start_line, start_column)
+                self.errors.append(error)
+                self.current_state = LexerState.INITIAL
+                # CHANGED
+                return T('INVALID', '~', start_line, start_column, error=error_msg)
+
+            lexeme = value.lstrip('0') or '0'
+            if len(lexeme) > 9:
+                error_msg = f"Negative integer literal '~{value}' exceeds max of 9 digits."
+                error = InvalidIntegerError(error_msg, start_line, start_column)
+                self.errors.append(error)
+                self.current_state = LexerState.INITIAL
+                # CHANGED
+                return T('INVALID', '~'+value, start_line, start_column, error=error_msg)
+
+            full_lexeme = '~' + lexeme
+
+            # Check delimiter
+            if self.current_char is not None:
+                two_char = self.current_char
+                if self.peek_next_char():
+                    two_char += self.peek_next_char()
+                if (self.current_char not in valid_delimiters_numeric and
+                    two_char not in valid_delimiters_numeric):
+                    error_msg = f"Invalid delimiter after negative integer '{full_lexeme}': '{self.current_char}'"
+                    error = InvalidSymbolError(self.current_char, self.line, self.column)
+                    error.message = error_msg
+                    self.errors.append(error)
+                    self.advance()
+                    self.current_state = LexerState.INITIAL
+                    return self.get_next_token()
+
+            self.current_state = LexerState.INITIAL
+            return T('NEGINTEGERLITERAL', full_lexeme, start_line, start_column)
+        else:
+            # Could be symbol '~' if followed by valid delimiter
+            valid_delims = valid_delimiters_symbol_dict.get('~', [])
+            if self.current_char is not None and self.current_char in valid_delims:
+                self.current_state = LexerState.INITIAL
+                return T('~', '~', start_line, start_column)
+            else:
+                # Invalid usage
+                if self.current_char is None:
+                    error_msg = f"Invalid usage of '~': must be followed by digits or valid delimiter."
+                else:
+                    error_msg = f"Invalid delimiter after '~': '{self.current_char}'"
+
+                error = InvalidIntegerError(error_msg, start_line, start_column)
+                self.errors.append(error)
+                self.current_state = LexerState.INITIAL
+                # CHANGED
+                return T('INVALID', '~', start_line, start_column, error=error_msg)
+
+    def handle_state_reading_negative_point(self, int_part, start_line, start_column):
+        value = int_part + '.'
+        self.advance()  # consume '.'
+
+        # If there's no digit after '.', it's incomplete
+        if self.current_char is None or not self.current_char.isdigit():
+            error_msg = "Incomplete negative point literal."
+            error = InvalidPointError(error_msg, start_line, start_column)
+            self.errors.append(error)
+            self.current_state = LexerState.INITIAL
+            return T('INVALID', '~'+value, start_line, start_column, error=error_msg)
+
+        while self.current_char is not None and self.current_char.isdigit():
             value += self.current_char
             self.advance()
+
+        if value.endswith('.'):
+            # CHANGED: Default fractional part to '0'
+            value += '0'
+            integer_part = int_part.lstrip('0') or '0'
+            fractional_part = '0'
+        else:
+            integer_part = int_part.lstrip('0') or '0'
+            fractional_part = value.split('.')[-1].rstrip('0') or '0'
+
+        if len(integer_part) > 9 or len(fractional_part) > 9:
+            error_msg = f"Negative point literal '~{int_part}.{fractional_part}' has too many digits."
+            error = InvalidPointError(error_msg, start_line, start_column)
+            self.errors.append(error)
+            self.current_state = LexerState.INITIAL
+            return T('INVALID', '~'+int_part+'.'+fractional_part,
+                        start_line, start_column, error=error_msg)
+
+        lexeme = f"~{integer_part}.{fractional_part}"
+
+        # Check delimiter
+        if self.current_char is not None:
+            two_char = self.current_char
+            if self.peek_next_char():
+                two_char += self.peek_next_char()
+            if (self.current_char not in valid_delimiters_numeric and
+                two_char not in valid_delimiters_numeric):
+                error_msg = f"Invalid delimiter after negative point '{lexeme}': '{self.current_char}'"
+                error = InvalidSymbolError(self.current_char, self.line, self.column)
+                self.errors.append(error)
+                # CHANGED
+                self.current_state = LexerState.INITIAL
+                return self.get_next_token()
+
+        self.current_state = LexerState.INITIAL
+        return T('NEGPOINTLITERAL', lexeme, start_line, start_column)
+
+    def handle_state_reading_string(self, start_line, start_column):
+        self.advance()  # consume opening quote
+        value = '"'
+        while self.current_char is not None and self.current_char != '"':
+            if self.current_char == '\\':
+                value += self.current_char
+                self.advance()
+                if self.current_char is not None:
+                    value += self.current_char
+                    self.advance()
+            elif self.current_char == '\n':
+                # Unterminated string
+                break
+            else:
+                value += self.current_char
+                self.advance()
+
         if self.current_char == '"':
             value += self.current_char
             self.advance()
+            self.current_state = LexerState.INITIAL
             return T('TEXTLITERAL', value, start_line, start_column)
         else:
-            error = LexerError(
-                f"Unterminated string literal: {value}",
-                start_line,
-                start_column,
-                'Invalid String Literal'
-            )
+            # Unterminated string
+            error_msg = f"Unterminated string literal: {value}"
+            error = LexerError(error_msg, start_line, start_column, 'Invalid String Literal')
             self.errors.append(error)
-            return T('INVALID', value, start_line, start_column)
+            self.current_state = LexerState.INITIAL
+            # CHANGED
+            return T('INVALID', value, start_line, start_column, error=error_msg)
 
-    def tokenize_symbol(self):
-        start_line = self.line
-        start_column = self.column
+    def handle_state_reading_symbol(self, start_line, start_column):
+        first_char = self.current_char
         symbol = None
-    
-        if self.current_char == '+':
-            self.advance()
+        self.advance()
+
+        # Multi-char operators
+        if first_char == '+':
             if self.current_char == '+':
-                self.advance()
                 symbol = '++'
-            elif self.current_char == '=':
                 self.advance()
+            elif self.current_char == '=':
                 symbol = '+='
+                self.advance()
             else:
                 symbol = '+'
-        elif self.current_char == '-':
-            self.advance()
+        elif first_char == '-':
             if self.current_char == '-':
-                self.advance()
                 symbol = '--'
-            elif self.current_char == '=':
                 self.advance()
+            elif self.current_char == '=':
                 symbol = '-='
+                self.advance()
             else:
                 symbol = '-'
-        elif self.current_char == '*':
-            self.advance()
+        elif first_char == '*':
             if self.current_char == '=':
-                self.advance()
                 symbol = '*='
+                self.advance()
             else:
                 symbol = '*'
-        elif self.current_char == '/':
-            self.advance()
+        elif first_char == '/':
             if self.current_char == '=':
-                self.advance()
                 symbol = '/='
+                self.advance()
             else:
                 symbol = '/'
-        elif self.current_char == '%':
-            self.advance()
+        elif first_char == '%':
             symbol = '%'
-        elif self.current_char == '=':
-            self.advance()
+        elif first_char == '=':
             if self.current_char == '=':
-                self.advance()
                 symbol = '=='
+                self.advance()
             else:
                 symbol = '='
-        elif self.current_char == '!':
-            self.advance()
+        elif first_char == '!':
             if self.current_char == '=':
-                self.advance()
                 symbol = '!='
+                self.advance()
             else:
                 symbol = '!'
-        elif self.current_char == '>':
-            self.advance()
+        elif first_char == '>':
             if self.current_char == '=':
-                self.advance()
                 symbol = '>='
+                self.advance()
             else:
                 symbol = '>'
-        elif self.current_char == '<':
-            self.advance()
+        elif first_char == '<':
             if self.current_char == '=':
-                self.advance()
                 symbol = '<='
+                self.advance()
             else:
                 symbol = '<'
-        elif self.current_char == '&':
-            self.advance()
+        elif first_char == '&':
             if self.current_char == '&':
-                self.advance()
                 symbol = '&&'
+                self.advance()
             else:
                 error = InvalidSymbolError('&', start_line, start_column)
                 self.errors.append(error)
-                return None
-        elif self.current_char == '|':
-            self.advance()
+                self.current_state = LexerState.INITIAL
+                # CHANGED
+                return T('INVALID', '&', start_line, start_column, error="Invalid symbol")
+        elif first_char == '|':
             if self.current_char == '|':
-                self.advance()
                 symbol = '||'
+                self.advance()
             else:
                 error = InvalidSymbolError('|', start_line, start_column)
                 self.errors.append(error)
-                return None
-        elif self.current_char in ['{', '}', '(', ')', '[', ']', ':', ',', ';']:
-            symbol = self.current_char
-            self.advance()
+                self.current_state = LexerState.INITIAL
+                # CHANGED
+                return T('INVALID', '|', start_line, start_column, error="Invalid symbol")
+        elif first_char in ['{', '}', '(', ')', '[', ']', ':', ',', ';']:
+            symbol = first_char
         else:
             # Invalid symbol
-            invalid_char = self.current_char
-            self.advance()
-            error = InvalidSymbolError(invalid_char, start_line, start_column)
+            error = InvalidSymbolError(first_char, start_line, start_column)
             self.errors.append(error)
-            return T('INVALID', invalid_char, start_line, start_column, error="Invalid symbol")
-    
+            self.current_state = LexerState.INITIAL
+            # CHANGED
+            return T('INVALID', first_char, start_line, start_column, error="Invalid symbol")
+
+        # Now we have the symbol. Validate the delimiter
         if symbol:
-            valid_delimiters = self.valid_delimiters_symbol_dict.get(symbol, [])
-            if self.current_char is not None and self.current_char not in valid_delimiters:
-                error_message = f"Invalid delimiter after symbol '{symbol}': '{self.current_char}"
-                # error_message = f"Invalid delimiter after symbol '{symbol}': '{self.current_char}' 'Delimiters: {valid_delimiters}'"
-                error = InvalidSymbolError(self.current_char, self.line, self.column)
-                error.message = error_message
-                self.errors.append(error)
-                self.advance()  # Skip the invalid character
-                return None  # Do not return the symbol token
+            valid_delims = valid_delimiters_symbol_dict.get(symbol, [])
+            if self.current_char is not None:
+                two_char = self.current_char
+                if self.peek_next_char():
+                    two_char += self.peek_next_char()
+                if (self.current_char not in valid_delims and
+                    two_char not in valid_delims):
+                    msg = f"Invalid delimiter after symbol '{symbol}': '{self.current_char}'"
+                    error = InvalidSymbolError(self.current_char, self.line, self.column)
+                    error.message = msg
+                    self.errors.append(error)
+                    self.current_state = LexerState.INITIAL
+                    return self.get_next_token()
+
+            self.current_state = LexerState.INITIAL
             return T(symbol, symbol, start_line, start_column)
-    
+
+        self.current_state = LexerState.INITIAL
         return None
 
-
-    def process_code_input(self):
-        """Lexical analyzer (also known as scanner or tokenizer)"""
-        while self.current_char is not None:
-            if self.current_char.isspace():
-                if self.current_char == ' ':
-                    token = self.tokenize_space()
-                    if token:
-                        return token
-                elif self.current_char == '\n':
-                    token = self.tokenize_newline()
-                    if token:
-                        return token
-                elif self.current_char == '\t':
-                    token = self.tokenize_space()
-                    if token:
-                        return token
-                else:
-                    self.advance()
-                continue
-
-            # check for identifiers or possible keywords
-            if self.current_char.isalpha() or self.current_char == '_':
-                token = self.tokenize_identifier_or_keyword()
-                if token:
-                    return token
-                continue
-    
-            # Numbers
-            if self.current_char.isdigit():
-                token = self.tokenize_number()
-                if token:
-                    return token
-                else:
-                    continue  # Error was handled; continue tokenization
-    
-            # Negative Numbers
-            if self.current_char == '~':
-                token = self.tokenize_negative_number()
-                if token:
-                    return token
-                else:
-                    continue  # Error was handled; continue tokenization
-    
-            # Strings
-            if self.current_char == '"':
-                token = self.tokenize_string_literal()
-                if token:
-                    return token
-    
-            if self.current_char == '#':
-                token = self.tokenize_comment()
-                if token:
-                    return token
-            
-            if self.current_char in self.symbols:
-                token = self.tokenize_symbol()
-                if token:
-                    return token
-                else:
-                    continue  # Skip invalid symbol and continue tokenization
-    
-            # Handle any other unexpected characters
-            value = self.current_char
-            self.advance()
-            error = InvalidSymbolError(value, self.line, self.column)
-            self.errors.append(error)
-            continue  # Continue lexing after handling error
-    
-        return None  # End of input
+    #--------------------------------------------------------------------------
+    # Utility: token generator
+    #--------------------------------------------------------------------------
+    def tokenize_all(self):
+        """
+        Repeatedly calls get_next_token until None is returned.
+        Returns a list of tokens.
+        """
+        tokens = []
+        while True:
+            token = self.get_next_token()
+            if token is None:
+                # End of input
+                break
+            tokens.append(token)
+        return tokens

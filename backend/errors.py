@@ -20,11 +20,6 @@ class InvalidIdentifierError(LexerError):
             message = f"Invalid identifier: '{value}'"
         super().__init__(message, line, column, 'Invalid Identifier')
 
-class InvalidDelimiterError(LexerError):
-    def __init__(self, value, line, column):
-        message = f"Invalid delimiter: '{value}'"
-        super().__init__(message, line, column, 'Invalid Delimiter')
-
 class InvalidSymbolError(LexerError):
     def __init__(self, value, line, column):
         message = f"Invalid symbol: '{value}'"

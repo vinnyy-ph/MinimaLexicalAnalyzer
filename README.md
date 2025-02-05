@@ -28,12 +28,12 @@
     *   **CMD/PowerShell:**
         ```bash
         cd frontend
-        npm install  # or npm ci for a clean install
+        npm install --force  # or npm ci for a clean install
         ```
 
 ## Running the Program
 
-This section explains how to start the application.
+This section explains how to start the application. Note: Always start a new powershell/command prompt window for each step.
 
 ### Frontend
 
