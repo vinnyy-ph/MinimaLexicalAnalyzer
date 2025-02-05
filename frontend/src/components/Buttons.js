@@ -25,7 +25,7 @@ const Buttons = ({ onAnalyze, onClear, onLoadFile, onSaveFile }) => {
 
   return (
     <Box sx={{ marginTop: 3, display: 'flex', gap: 4, paddingX: 1 }}>
-      <Button
+      {/* <Button
         variant="contained"
         color="buttonAnalyze"
         startIcon={<AnalyzeIcon />}
@@ -43,7 +43,7 @@ const Buttons = ({ onAnalyze, onClear, onLoadFile, onSaveFile }) => {
         }}
       >
         Analyze
-      </Button>
+      </Button> */}
       <Button
         variant="contained"
         color="buttonClear"

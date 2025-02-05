@@ -1,6 +1,4 @@
-// src/components/LexicalAnalyzer.js
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CodeEditor from './Editor';
 import Buttons from './Buttons';
 import OutputTable from './OutputTable';
@@ -8,10 +6,10 @@ import Errors from './Errors';
 import axios from 'axios';
 import logo from '../assets/logomnm.png'; 
 import { Grid, Box, Typography, IconButton, useTheme } from '@mui/material';
-import Brightness4Icon from '@mui/icons-material/Brightness4'; // Icon for dark mode
-import Brightness7Icon from '@mui/icons-material/Brightness7'; // Icon for light mode
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 
-const LexicalAnalyzer = ({ toggleSidebar, themeMode, toggleTheme }) => { // Receive theme props
+const LexicalAnalyzer = ({ toggleSidebar, themeMode, toggleTheme }) => {
   const [code, setCode] = useState('');
   const [tokens, setTokens] = useState([]);
   const [errors, setErrors] = useState([]);
@@ -54,14 +52,11 @@ const LexicalAnalyzer = ({ toggleSidebar, themeMode, toggleTheme }) => { // Rece
     reader.readAsText(file);
   };
 
-  // Implement the Save File functionality
   const handleSaveFile = async () => {
     if (!code) {
       alert('There is no code to save.');
       return;
     }
-  
-    // Check if the File System Access API is supported
     if ('showSaveFilePicker' in window) {
       try {
         const options = {
@@ -83,7 +78,6 @@ const LexicalAnalyzer = ({ toggleSidebar, themeMode, toggleTheme }) => { // Rece
         alert('An error occurred while saving the file.');
       }
     } else {
-      // Fallback to download
       const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -97,30 +91,45 @@ const LexicalAnalyzer = ({ toggleSidebar, themeMode, toggleTheme }) => { // Rece
     }
   };
 
+  // 1. Debounce the analyze call whenever "code" changes
+  useEffect(() => {
+    // If there's no code, you might skip analyzing or handle differently
+    if (!code) {
+      setTokens([]);
+      setErrors([]);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(() => {
+      handleAnalyze();
+    }, 100); // Delay in milliseconds
+
+    // Cleanup function to clear the timeout if code changes again
+    return () => clearTimeout(delayDebounceFn);
+  }, [code]); // Only re-run effect if code changes
+
   return (
     <div style={{ padding: '20px' }}>
       <Grid container spacing={2}>
         {/* Editor */}
         <Grid item xs={12} md={6}>
-          {/* Editor Container */}
-          <Box 
-            sx={{ 
-              height: 'calc(65vh - 2rem)', 
-              borderRadius: 2, 
-              background: theme.palette.background.paper, 
+          <Box
+            sx={{
+              height: 'calc(65vh - 2rem)',
+              borderRadius: 2,
+              background: theme.palette.background.paper,
               padding: 3,
               boxShadow: 3,
             }}
           >
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
-                marginBottom: 3 
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 3
               }}
             >
-              {/* Logo with onClick to toggle sidebar */}
               <IconButton 
                 onClick={toggleSidebar} 
                 sx={{ 
@@ -149,34 +158,31 @@ const LexicalAnalyzer = ({ toggleSidebar, themeMode, toggleTheme }) => { // Rece
               <Typography color='text.primary' fontWeight='bold' variant="subtitle1">
                 Loaded File: {fileName || 'None'}
               </Typography>
-              {/* Theme Toggle Button */}
-              <IconButton
-                sx={{ ml: 1 }}
-                onClick={toggleTheme}
-                color="inherit"
-              >
+              {/* Theme Toggle */}
+              <IconButton sx={{ ml: 1 }} onClick={toggleTheme} color="inherit">
                 {themeMode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
               </IconButton>
             </Box>
             <CodeEditor code={code} setCode={setCode} loading={loading} />
           </Box>
           
-          {/* Buttons */}
+          {/* Buttons (optional if you remove the Analyze button) */}
           <Buttons
-            onAnalyze={handleAnalyze}
+            onAnalyze={handleAnalyze} // optional now
             onClear={handleClear}
             onLoadFile={handleLoadFile}
-            onSaveFile={handleSaveFile} // Pass the save handler
+            onSaveFile={handleSaveFile}
           />
           {/* Errors */}
           <Errors errors={errors} />
         </Grid>
+
         {/* Output Table */}
         <Grid item xs={12} md={6} sx={{ height: '100%' }}>
-          <Box 
-            sx={{ 
-              borderRadius: 2, 
-              background: theme.palette.background.paper, 
+          <Box
+            sx={{
+              borderRadius: 2,
+              background: theme.palette.background.paper,
               padding: 3,
               boxShadow: 3,
               height: '100%',
