@@ -1,5 +1,5 @@
 # Python (Backend)
-.venv/           # Ignore the entire virtual environment
+venv/           # Ignore the entire virtual environment
 __pycache__/     # Ignore Python bytecode
 *.pyc            # Ignore Python bytecode (older style)
 *.log            # Ignore log files (customize as needed)
