@@ -319,10 +319,8 @@ class Lexer:
                     error = InvalidSymbolError(self.current_char, self.line, self.column)
                     error.message = msg
                     self.errors.append(error)
-                    self.advance()
                     self.current_state = LexerState.INITIAL
-                    # CHANGED: Return INVALID token instead of None
-                    return T('INVALID', value, start_line, start_column, error=msg)
+                    return self.get_next_token()
 
             self.current_state = LexerState.INITIAL
             return T(token_type, value, start_line, start_column)
@@ -389,7 +387,6 @@ class Lexer:
                 error = InvalidSymbolError(self.current_char, self.line, self.column)
                 error.message = error_msg
                 self.errors.append(error)
-                # CHANGED
                 self.current_state = LexerState.INITIAL
                 return self.get_next_token()
 
