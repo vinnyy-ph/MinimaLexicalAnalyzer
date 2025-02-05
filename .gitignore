@@ -1,0 +1,26 @@
+# Python (Backend)
+.venv/           # Ignore the entire virtual environment
+__pycache__/     # Ignore Python bytecode
+*.pyc            # Ignore Python bytecode (older style)
+*.log            # Ignore log files (customize as needed)
+instance/        # If using Flask, ignore the instance folder (contains sensitive data)
+.DS_Store       # macOS specific - ignore desktop services store files
+*.swp            # Vim swap files
+.env            # Environment variables, especially for backend (CRITICAL!)
+config.ini       # Configuration files (if they contain sensitive info)
+
+# Frontend (Create React App)
+node_modules/   # Ignore Node.js dependencies
+build/          # Ignore the production build output
+.cache          # Ignore the cache directory (often used by bundlers)
+.DS_Store       # macOS specific - ignore desktop services store files
+
+# General (across both)
+.idea/           # IntelliJ IDEA project files
+.vscode/         # VS Code project files
+.envrc          # If you're using direnv
+.history        # Shell history files
+.bash_history   # Bash history
+.zsh_history    # Zsh history
+
+# If you have any other files or directories you don't want to track, add them here.
