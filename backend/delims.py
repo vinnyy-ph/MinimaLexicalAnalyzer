@@ -4,7 +4,7 @@ valid_delimiters_identifier = [
 ]
 
 valid_delimiters_numeric = [
-    '\n',' ', '\t', '', '-', '*', '/', '%', ',', '=', '!',
+    '\n',' ', '\t', '+', '-', '*', '/', '%', ',', '=', '!',
     '<', '>', ')', ']', '}', ';', ':', '|', '&', 
 ]
 
@@ -88,7 +88,7 @@ valid_delimiters_symbol_dict = {
             '/', '*', '==', '!', '<', '>', '<', '>', '#', '\n', '\t'],
     ':':  [' ', '\n', '\t', '{', '~', '"', 'Y', 'N', '#', '\n', '\t']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
-    '~':  [' ', '(', '#'] + list('abcdefghijklmnopqrstuvwxyz0123456789'),
+    '~':  [' ', '(', '#','\n'] + list('abcdefghijklmnopqrstuvwxyz0123456789'),
     ',':  [' ', '\n', '\t', '"', '(', '~', 'Y', 'N','{', '#']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
     ';':  [' ', '\n', '\t', '#']
