@@ -32,8 +32,3 @@ class InvalidIntegerError(LexerError):
 class InvalidPointError(LexerError):
     def __init__(self, message, line, column):
         super().__init__(message, line, column, 'Invalid Point Literal')
-
-class InvalidSymbolError(LexerError):
-    def __init__(self, value, line, column):
-        message = f"Invalid symbol: '{value}'"
-        super().__init__(message, line, column, 'Invalid Symbol')
