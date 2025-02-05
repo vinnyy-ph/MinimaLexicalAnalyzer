@@ -489,8 +489,6 @@ class Lexer:
                 error = InvalidIntegerError(error_msg, start_line, start_column)
                 self.errors.append(error)
                 self.current_state = LexerState.INITIAL
-                # CHANGED
-                return T('INVALID', '~'+value, start_line, start_column, error=error_msg)
 
             full_lexeme = '~' + lexeme
 
@@ -521,14 +519,11 @@ class Lexer:
                 # Invalid usage
                 if self.current_char is None:
                     error_msg = f"Invalid usage of '~': must be followed by digits or valid delimiter."
-                else:
-                    error_msg = f"Invalid delimiter after '~': '{self.current_char}'"
-
-                error = InvalidIntegerError(error_msg, start_line, start_column)
-                self.errors.append(error)
-                self.current_state = LexerState.INITIAL
-                # CHANGED
-                return T('INVALID', '~', start_line, start_column, error=error_msg)
+                    error = InvalidIntegerError(error_msg, start_line, start_column)
+                    self.errors.append(error)
+                    self.advance()
+                    self.current_state = LexerState.INITIAL
+                    return self.get_next_token()
 
     def handle_state_reading_negative_point(self, int_part, start_line, start_column):
         value = int_part + '.'
