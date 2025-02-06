@@ -299,7 +299,7 @@ class Lexer:
         value = "\\n"
         self.advance()  # consume '\n'
         self.current_state = LexerState.INITIAL
-        return T('NEWLINE', value, start_line, start_column)
+        return T('WHITESPACE', value, start_line, start_column)
 
     def handle_state_reading_comment(self, start_line, start_column):
         comment_value = ""
