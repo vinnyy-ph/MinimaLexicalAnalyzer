@@ -10,7 +10,9 @@ export const MinimaTheme = {
     { token: 'number', foreground: 'B5CEA8' },
     { token: 'operator', foreground: 'D4D4D4' },
     { token: 'delimiter', foreground: 'D4D4D4' },
-    { token: 'TEXTLITERAL', foreground: '6A9955' },
+    { token: 'string', foreground: '6A9955' },
+    { token: 'string.delim', foreground: '6A9955' },
+    { token: 'string.escape', foreground: '6A9955' },
     // Add more token styles as needed
   ],
   colors: {

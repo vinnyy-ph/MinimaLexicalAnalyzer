@@ -20,25 +20,18 @@ const CodeEditor = ({ code, setCode }) => {
   const handleEditorDidMount = (editor, monacoInstance) => {
     monacoRef.current = monacoInstance;
     
-    // Register language
     monacoInstance.languages.register({ id: MINIMA });
 
-    // Set tokenizer
     monacoInstance.languages.setMonarchTokensProvider(MINIMA, tokenizer);
 
-    // Set language configuration
     monacoInstance.languages.setLanguageConfiguration(MINIMA, languageConfiguration);
 
-    // Register completion provider
     monacoInstance.languages.registerCompletionItemProvider(MINIMA, provideCompletionItems(monacoInstance));
 
-    // Define and set custom dark theme
     monacoInstance.editor.defineTheme('myMinimaTheme', MinimaTheme);
 
-    // Define and set custom light theme
     monacoInstance.editor.defineTheme('myMinimaThemeLight', MinimaThemeLight);
 
-    // Set the initial theme based on MUI theme
     const initialTheme = theme.palette.mode === 'dark' ? 'myMinimaTheme' : 'myMinimaThemeLight';
     monacoInstance.editor.setTheme(initialTheme);
   };

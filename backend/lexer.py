@@ -336,7 +336,7 @@ class Lexer:
         if token_type:
             # -- It's a keyword --
             if self.current_char is not None:
-                valid_delims = valid_delimiters_dict.get(token_type, [])
+                valid_delims = valid_delimiters_keywords_dict.get(token_type, [])
                 two_char = self.current_char
                 if self.peek_next_char():
                     two_char += self.peek_next_char()
@@ -483,25 +483,40 @@ class Lexer:
         self.current_state = LexerState.INITIAL
         return T('POINTLITERAL', lexeme, start_line, start_column)
 
+    # In backend/lexer.py
     def handle_state_reading_negative_int(self, start_line, start_column):
         self.advance()  # consume '~'
-
-        # Allow digits or '.' to handle negative point
-        if self.current_char is not None and (self.current_char.isdigit() or self.current_char == '.'):
+    
+        # If the character after '~' is '.' then it's an invalid delimiter.
+        if self.current_char == '.':
+            error_msg = f"Invalid delimiter after '~': '{self.current_char}'"
+            error = InvalidSymbolError(self.current_char, self.line, self.column)
+            error.message = error_msg
+            self.errors.append(error)
+            self.current_state = LexerState.INITIAL
+            # Return the '~' token with the error so that '.' remains for further processing.
+            return self.get_next_token()
+    
+        # Otherwise, if it's a digit then continue processing negative numbers.
+        if self.current_char is not None and self.current_char.isdigit():
             value = ""
             while self.current_char is not None and (self.current_char.isdigit() or self.current_char == '.'):
                 if self.current_char == '.':
                     return self.handle_state_reading_negative_point(value, start_line, start_column)
                 value += self.current_char
                 self.advance()
-
+    
             lexeme = value.lstrip('0') or '0'
             if len(lexeme) > 9:
                 error_msg = f"Negative integer literal '~{value}' exceeds max of 9 digits."
-                ...
+                error = InvalidIntegerError(error_msg, start_line, start_column)
+                self.errors.append(error)
+                self.current_state = LexerState.INITIAL
+                return T('INVALID', value, start_line, start_column, error=error_msg)
+            
             full_lexeme = '~' + lexeme
-
-            # Check delimiter
+    
+            # Check delimiter block remains the same
             if self.current_char is not None:
                 two_char = self.current_char
                 if self.peek_next_char():
@@ -515,17 +530,16 @@ class Lexer:
                     self.advance()
                     self.current_state = LexerState.INITIAL
                     return self.get_next_token()
-
+    
             self.current_state = LexerState.INITIAL
             return T('NEGINTEGERLITERAL', full_lexeme, start_line, start_column)
         else:
-            # Could be symbol '~' if followed by valid delimiter
+            # Could be symbol '~' if followed by valid delimiter; unchanged.
             valid_delims = valid_delimiters_symbol_dict.get('~', [])
             if self.current_char is not None and self.current_char in valid_delims:
                 self.current_state = LexerState.INITIAL
                 return T('~', '~', start_line, start_column)
             else:
-                # Report invalid delimiter after '~'
                 if self.current_char is None:
                     error_msg = f"Invalid usage of '~': must be followed by digits or valid delimiter."
                     error = InvalidIntegerError(error_msg, start_line, start_column)
@@ -538,54 +552,69 @@ class Lexer:
                     error = InvalidSymbolError(self.current_char, self.line, self.column)
                     error.message = error_msg
                     self.errors.append(error)
-                    # Return '~' so that '.' will be parsed next (and treated as invalid symbol).
                     self.current_state = LexerState.INITIAL
                     return self.get_next_token()
 
     def handle_state_reading_negative_point(self, int_part, start_line, start_column):
         value = int_part + '.'
         self.advance()  # consume '.'
-
+    
         # If there's no digit after '.', it's incomplete
         if self.current_char is None or not self.current_char.isdigit():
             error_msg = "Incomplete negative point literal."
             error = InvalidPointError(error_msg, start_line, start_column)
             self.errors.append(error)
             self.current_state = LexerState.INITIAL
-            return T('INVALID', '~'+value, start_line, start_column, error=error_msg)
-
+            return T('INVALID', '~' + value, start_line, start_column, error=error_msg)
+    
         while self.current_char is not None and self.current_char.isdigit():
             value += self.current_char
             self.advance()
-
+    
         integer_part = int_part.lstrip('0') or '0'
         fractional_part = value.split('.')[-1].rstrip('0') or '0'
 
-        if len(integer_part) > 9 or len(fractional_part) > 9:
-            error_msg = f"Negative point literal '~{int_part}.{fractional_part}' has too many digits."
+        if len(integer_part) > 9 and len(fractional_part) > 9:
+            error_msg = f"Negative point literal '~{int_part}.{fractional_part}' exceeds max of 9 integer and fractional digits."
             error = InvalidPointError(error_msg, start_line, start_column)
             self.errors.append(error)
             self.current_state = LexerState.INITIAL
-            return T('INVALID', '~'+int_part+'.'+fractional_part, start_line, start_column, error=error_msg)
+            return T('INVALID', '~' + int_part + '.' + fractional_part, start_line, start_column, error=error_msg)
+    
+        if len(integer_part) > 9:
+            error_msg = f"Negative point literal '~{int_part}.{fractional_part}' exceeds max of 9 integer digits."
+            error = InvalidPointError(error_msg, start_line, start_column)
+            self.errors.append(error)
+            self.current_state = LexerState.INITIAL
+            return T('INVALID', '~' + int_part + '.' + fractional_part, start_line, start_column, error=error_msg)
+        
+        if len(fractional_part) > 9:
+            error_msg = f"Negative point literal '~{int_part}.{fractional_part}' exceeds max of 9 fractional digits."
+            error = InvalidPointError(error_msg, start_line, start_column)
+            self.errors.append(error)
+            self.current_state = LexerState.INITIAL
+            return T('INVALID', '~' + int_part + '.' + fractional_part, start_line, start_column, error=error_msg)
 
-        lexeme = f"~{integer_part}.{fractional_part}"
-
+        # If the value equals 0.0, treat it as a positive point literal
+        if integer_part == '0' and fractional_part == '0':
+            lexeme = f"{integer_part}.{fractional_part}"
+            token_type = 'POINTLITERAL'
+        else:
+            lexeme = f"~{integer_part}.{fractional_part}"
+            token_type = 'NEGPOINTLITERAL'
+    
         # Check delimiter
         if self.current_char is not None:
-            two_char = self.current_char
-            if self.peek_next_char():
-                two_char += self.peek_next_char()
-            if (self.current_char not in valid_delimiters_numeric and
-                two_char not in valid_delimiters_numeric):
+            if (self.current_char not in valid_delimiters_numeric):
                 error_msg = f"Invalid delimiter after point literal '{lexeme}': '{self.current_char}'"
                 error = InvalidSymbolError(self.current_char, self.line, self.column)
                 error.message = error_msg
                 self.errors.append(error)
                 self.current_state = LexerState.INITIAL
                 return self.get_next_token()
-
+    
         self.current_state = LexerState.INITIAL
-        return T('NEGPOINTLITERAL', lexeme, start_line, start_column)
+        return T(token_type, lexeme, start_line, start_column)
 
     def handle_state_reading_string(self, start_line, start_column):
         self.advance()  # consume opening quote
@@ -711,14 +740,25 @@ class Lexer:
             return T('INVALID', first_char, start_line, start_column, error="Invalid symbol")
 
         # Now we have the symbol. Validate the delimiter
+        # if symbol:
+        #     valid_delims = valid_delimiters_symbol_dict.get(symbol, [])
+        #     if self.current_char is not None:
+        #         two_char = self.current_char
+        #         if self.peek_next_char():
+        #             two_char += self.peek_next_char()
+        #         if (self.current_char not in valid_delims and
+        #             two_char not in valid_delims):
+        #             msg = f"Invalid delimiter after symbol '{symbol}': '{self.current_char}'"
+        #             error = InvalidSymbolError(self.current_char, self.line, self.column)
+        #             error.message = msg
+        #             self.errors.append(error)
+        #             self.current_state = LexerState.INITIAL
+        #             return self.get_next_token()
+
         if symbol:
             valid_delims = valid_delimiters_symbol_dict.get(symbol, [])
             if self.current_char is not None:
-                two_char = self.current_char
-                if self.peek_next_char():
-                    two_char += self.peek_next_char()
-                if (self.current_char not in valid_delims and
-                    two_char not in valid_delims):
+                if (self.current_char not in valid_delims):
                     msg = f"Invalid delimiter after symbol '{symbol}': '{self.current_char}'"
                     error = InvalidSymbolError(self.current_char, self.line, self.column)
                     error.message = msg
