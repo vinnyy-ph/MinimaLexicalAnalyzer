@@ -29,7 +29,7 @@ valid_delimiters_keywords_dict = {
     'exit': [ ' ', ';' , '#', '\n', '\t'],
     'next': [ ' ', ';' , '#', '\n', '\t'],
     'func': [ ' ' , '#', '\n', '\t'],
-    'throw': [ ' ' , '#', '\n', '\t', '('],
+    'throw': [ ' ' , '#', '\n', '\t', '(', '"'],
     'empty': [ ' ', ';',',',':' , '#', '\n', '\t'],
     'STATELITERAL': [ ' ', ')', '&', ',', ';', '}', '|', '=', '!','>','<', '+', '-', '*', '/', '%', '#', '\n', '\t'],
 }
@@ -41,35 +41,35 @@ valid_delimiters_symbol_dict = {
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
     '+':  [' ', '(', '~', '"', '#', '\n', '\t', '!']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
-    '++': [' ', ')', ';', '}', ',', '<', '=','>', '#', '\n', '\t', '+', '-', '/','*','%'],
-    '+=': [' ', '(', '~', '#', '\n', '\t']
+    '++': [' ', ')', ';', '}', ',', '<', '=','>', '#', '\n', '\t', '+', '-', '/','*','%', '!'],
+    '+=': [' ', '(', '~', '#', '\n', '\t', 'Y', 'N']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
-    '-':  [' ', '(', '~', '#', '\n', '\t']
+    '-':  [' ', '(', '~', '#', '\n', '\t', 'Y', 'N']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
     '--': [' ', ')', ';', '}', ',', '<', '==','>', '#', '\n', '\t', '+', '-', '/','*','%',"!"],
-    '-=': [' ', '(', '~', '#', '\n', '\t']
+    '-=': [' ', '(', '~', '#', '\n', '\t', 'Y', 'N']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
-    '*':  [' ', '(', '~', '#', '\n', '\t']
+    '*':  [' ', '(', '~', '#', '\n', '\t', 'Y', 'N']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
-    '*=': [' ', '(', '~', '#', '\n', '\t']
+    '*=': [' ', '(', '~', '#', '\n', '\t', 'Y', 'N']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
-    '/':  [' ', '(', '~', '#', '\n', '\t']
+    '/':  [' ', '(', '~', '#', '\n', '\t', 'Y', 'N']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
-    '/=': [' ', '(', '~', '#', '\n', '\t']
+    '/=': [' ', '(', '~', '#', '\n', '\t', 'Y', 'N']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
-    '%':  [' ', '(', '~', '#', '\n', '\t']
+    '%':  [' ', '(', '~', '#', '\n', '\t', 'Y', 'N']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
     '!':  [' ', '(', 'Y', 'N', '#', '\n', '\t','~']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
     '!=': [' ', '(', '~', '"', 'Y', 'N','!', '#', '\n', '\t']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
-    '>':  [' ', '(', '~', '#', '\n', '\t']
+    '>':  [' ', '(', '~', '#', '\n', '\t', 'Y', 'N']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
-    '>=': [' ', '(', '~', '#', '\n', '\t']
+    '>=': [' ', '(', '~', '#', '\n', '\t', 'Y', 'N']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
-    '<':  [' ', '(', '~', '#', '\n', '\t']
+    '<':  [' ', '(', '~', '#', '\n', '\t', 'Y', 'N']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
-    '<=': [' ', '(', '~', '#', '\n', '\t']
+    '<=': [' ', '(', '~', '#', '\n', '\t', 'Y', 'N']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
     '&&': [' ', '(', 'Y', 'N', '!', '#', '\n', '\t','~']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
@@ -83,14 +83,14 @@ valid_delimiters_symbol_dict = {
     ')':  [' ', '\n', '\t', ';', ')', '{', '+', '-', '*', '/',
             '%', '=', '!=', '<', '>', '<=', '>=', '&', '|', '!',
             ',', '}', '#', '\n', '\t'],
-    '[':  [' ', '"','#'] + list('abcdefghijklmnopqrstuvwxyz0123456789'),
+    '[':  [' ', '"','#', '\n', '\t'] + list('abcdefghijklmnopqrstuvwxyz0123456789'),
     ']':  [' ', ')', ';', '+', '-', '*', '/', '%', '=', '+', '-',
             '/', '*', '==', '!', '<', '>', '<', '>', '#', '\n', '\t'],
     ':':  [' ', '\n', '\t', '{', '~', '"', 'Y', 'N', '#', '\n', '\t']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
-    '~':  [' ', '(', '#','\n'] + list('abcdefghijklmnopqrstuvwxyz0123456789'),
+    '~':  ['Y','N',' ', '(', '#','\n'] + list('abcdefghijklmnopqrstuvwxyz0123456789'),
     ',':  [' ', '\n', '\t', '"', '(', '~', 'Y', 'N','{', '#']
             + list('abcdefghijklmnopqrstuvwxyz0123456789'),
-    ';':  [' ', '\n', '\t', '#']
+    ';':  [' ', '\n', '\t', '#', '}']
             + list('abcdefghijklmnopqrstuvwxyz'),
 }
