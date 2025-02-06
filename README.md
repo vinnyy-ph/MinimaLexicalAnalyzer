@@ -53,14 +53,21 @@ This section explains how to start the application. Note: Always start a new pow
 
 ### Backend (Lexer)
 
-1.  Navigate to the backend directory:
+1.  **Activate the virtual environment:**
+
+    *   **CMD/PowerShell:**
+        ```bash
+        venv\Scripts\activate
+        ```
+
+2.  Navigate to the backend directory:
 
     *   **CMD/PowerShell:**
         ```bash
         cd backend
         ```
 
-2.  Run the Python application:
+3.  Run the Python application:
 
     *   **CMD/PowerShell:**
         ```bash
