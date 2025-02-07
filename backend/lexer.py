@@ -197,12 +197,8 @@ class Lexer:
     #--------------------------------------------------------------------------
     def get_next_token(self):
         """
-        The core of the FSM. It advances character by character,
-        uses self.current_state to decide how to handle them,
-        and transitions between states until a token is formed or an error occurs.
-        
-        IMPORTANT: If an error occurs, we return an 'INVALID' token instead of None.
-                   If end-of-file, we return None.
+        MAIN LOOP: 
+        🟢 GOES BACK TO INITIAL STATE AFTER EACH TOKEN
         """
         
         self.current_lexeme = ""
@@ -225,7 +221,6 @@ class Lexer:
                     elif self.current_char == '\t':
                         self.current_state = LexerState.READING_SPACE
                     else:
-                        # Some other whitespace char, skip
                         self.advance()
                         return self.get_next_token()
                 elif self.current_char == '#':
@@ -244,7 +239,7 @@ class Lexer:
                     self.errors.append(error)
                     invalid_char = self.current_char
                     self.advance()
-                    return T('INVALID', invalid_char, start_line, start_column, error="Invalid symbol")
+
                 elif self.current_char in self.symbols:
                     self.current_state = LexerState.READING_SYMBOL
                 else:
@@ -253,7 +248,6 @@ class Lexer:
                     self.errors.append(error)
                     invalid_char = self.current_char
                     self.advance()
-                    # CHANGED: Return INVALID token instead of None
                     return T('INVALID', invalid_char, start_line, start_column, error="Invalid symbol")
 
                 continue
@@ -303,7 +297,7 @@ class Lexer:
 
     def handle_state_reading_comment(self, start_line, start_column):
         comment_value = ""
-        self.advance()  # skip '#'
+        #self.advance()  # skip '#'
         while self.current_char is not None and self.current_char != '\n':
             comment_value += self.current_char
             self.advance()
@@ -411,8 +405,7 @@ class Lexer:
             error = InvalidIntegerError(error_msg, start_line, start_column)
             self.errors.append(error)
             self.current_state = LexerState.INITIAL
-            # CHANGED: Return INVALID instead of None
-            return T('INVALID', value, start_line, start_column, error=error_msg)
+            return self.get_next_token()
 
         # Check delimiter
         if self.current_char is not None:
@@ -446,12 +439,7 @@ class Lexer:
             value += self.current_char
             self.advance()
 
-        if value.endswith('.'):
-            # No fractional part
-            fractional_part = '0'
-            value += '0'
-        else:
-            fractional_part = value.split('.')[-1]
+        fractional_part = value.split('.')[-1]
 
         integer_part = value.split('.')[0].lstrip('0') or '0'
         fractional_part = fractional_part.rstrip('0') or '0'
@@ -461,18 +449,25 @@ class Lexer:
             error = InvalidPointError(error_msg, start_line, start_column)
             self.errors.append(error)
             self.current_state = LexerState.INITIAL
-            # CHANGED
-            return T('INVALID', value, start_line, start_column, error=error_msg)
+            return self.get_next_token()
 
         lexeme = integer_part + '.' + fractional_part
 
         # Check delimiter
+        # if self.current_char is not None:
+        #     two_char = self.current_char
+        #     if self.peek_next_char():
+        #         two_char += self.peek_next_char()
+        #     if (self.current_char not in valid_delimiters_numeric and
+        #         two_char not in valid_delimiters_numeric):
+        #         error_msg = f"Invalid delimiter after point literal '{lexeme}': '{self.current_char}'"
+        #         error = InvalidSymbolError(self.current_char, self.line, self.column)
+        #         error.message = error_msg
+        #         self.errors.append(error)
+        #         self.current_state = LexerState.INITIAL
+        #         return self.get_next_token()
         if self.current_char is not None:
-            two_char = self.current_char
-            if self.peek_next_char():
-                two_char += self.peek_next_char()
-            if (self.current_char not in valid_delimiters_numeric and
-                two_char not in valid_delimiters_numeric):
+            if (self.current_char not in valid_delimiters_numeric):
                 error_msg = f"Invalid delimiter after point literal '{lexeme}': '{self.current_char}'"
                 error = InvalidSymbolError(self.current_char, self.line, self.column)
                 error.message = error_msg
@@ -483,7 +478,6 @@ class Lexer:
         self.current_state = LexerState.INITIAL
         return T('POINTLITERAL', lexeme, start_line, start_column)
 
-    # In backend/lexer.py
     def handle_state_reading_negative_int(self, start_line, start_column):
         self.advance()  # consume '~'
     
@@ -527,12 +521,11 @@ class Lexer:
                     error = InvalidSymbolError(self.current_char, self.line, self.column)
                     error.message = error_msg
                     self.errors.append(error)
-                    self.advance()
                     self.current_state = LexerState.INITIAL
                     return self.get_next_token()
     
             self.current_state = LexerState.INITIAL
-            return T('NEGINTEGERLITERAL', full_lexeme, start_line, start_column)
+            return self.get_next_token()
         else:
             # Could be symbol '~' if followed by valid delimiter; unchanged.
             valid_delims = valid_delimiters_symbol_dict.get('~', [])
