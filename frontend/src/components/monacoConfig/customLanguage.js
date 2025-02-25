@@ -24,7 +24,7 @@ export const MinimaLang = (monaco) => {
           [/"/, { token: 'string.quote', next: '@pop' }],
         ],
       },
-      keywords: ['get', 'show', 'integer', 'point', 'state', 'texts', 'group', 'checkif', 'recheck', 'otherwise', 'switch', 'each','repeat','do', 'exit','next','fixed','func','throw','case','default','YES','NO', 'empty'],
+      keywords: ['var','get', 'show', 'integer', 'point', 'state', 'text', 'group', 'checkif', 'recheck', 'otherwise', 'switch', 'each','repeat','do', 'exit','next','fixed','func','throw','case','default','YES','NO', 'empty'],
     });
   
     monaco.languages.setLanguageConfiguration('MinimaLanguage', {

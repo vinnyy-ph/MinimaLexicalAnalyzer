@@ -1,0 +1,162 @@
+%import common.WS
+%ignore WS
+%ignore /\n/
+%ignore /#.*/
+
+LBRACE: "{"
+RBRACE: "}"
+LSQB: "["
+RSQB: "]"
+LPAREN: "("
+RPAREN: ")"
+
+VAR: "var"
+FIXED: "fixed"
+GROUP: "group"
+GET: "get"
+THROW: "throw"
+SHOW: "show"
+CHECKIF: "checkif"
+RECHECK: "recheck"
+OTHERWISE: "otherwise"
+SWITCH: "switch"
+CASE: "case"
+DEFAULT: "default"
+EXIT: "exit"
+NEXT: "next"
+EACH: "each"
+REPEAT: "repeat"
+DO: "do"
+EMPTY: "empty"
+FUNC: "func"
+
+OR_OP: "||"
+AND_OP: "&&"
+EQ_OP: "=="
+NEQ_OP: "!="
+LT: "<"
+LE: "<="
+GT: ">"
+GE: ">="
+
+PLUS: "+"
+MINUS: "-"
+STAR: "*"
+SLASH: "/"
+PERCENT: "%"
+
+BANG: "!"
+TILDE: "~"
+INC_OP: "++"
+DEC_OP: "--"
+
+ASSIGN: "="
+ADD_ASSIGN: "+="
+SUB_ASSIGN: "-="
+MUL_ASSIGN: "*="
+DIV_ASSIGN: "/="
+
+COMMA: ","
+COLON: ":"
+SEMICOLON: ";"
+
+INTEGER: "integer"
+POINT: "point"
+STATE: "state"
+TEXT: "text"
+
+IDENTIFIER:/(?!(?:var|fixed|group|func|throw|show|checkif|recheck|otherwise|switch|case|default|exit|next|each|repeat|do|integer|point|state|text|empty)(?![a-zA-Z0-9_]))(?:get|[a-z][a-zA-Z0-9_]{0,19})/
+INTEGERLITERAL: /[0-9]{1,9}/
+FLOATLITERAL: /[0-9]{1,9}\.[0-9]{1,9}/
+NEGINTEGERLITERAL: /~[0-9]{1,9}/
+NEGFLOATLITERAL: /~[0-9]{1,9}\.[0-9]{1,9}/
+STRINGLITERAL: /"[^"]*"/
+STATELITERAL: "YES" | "NO"
+
+?start: program
+
+?program: (declaration | var_assign | func_definition | statement | expression SEMICOLON)*
+
+?declaration: varlist_declaration
+            | fixed_declaration
+            | group_declaration
+
+varlist_declaration: VAR IDENTIFIER var_init? SEMICOLON
+var_init: ASSIGN variable_value
+
+fixed_declaration: FIXED IDENTIFIER ASSIGN variable_value SEMICOLON
+
+group_declaration: GROUP IDENTIFIER LBRACE group_members RBRACE
+group_members: member (COMMA member)*
+member: expression COLON expression
+
+?var_assign: modifiable_lvalue assign_op variable_value SEMICOLON
+modifiable_lvalue: IDENTIFIER group_or_list?
+
+assign_op: ASSIGN | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | DIV_ASSIGN 
+
+?variable_value: get_expr 
+               | (LSQB list_value RSQB)
+               | expression
+get_expr: GET LPAREN expression RPAREN | GET LPAREN RPAREN
+list_value: expression (COMMA expression)*
+
+?id_usage: modifiable_lvalue unary_op?
+         | IDENTIFIER func_call
+
+group_or_list: (LSQB expression RSQB) | (LBRACE expression RBRACE)
+unary_op: INC_OP | DEC_OP
+
+func_call: LPAREN args? RPAREN
+args: (expression (COMMA expression)*)?
+
+?expression: logical_or_expr
+logical_or_expr: logical_and_expr (OR_OP logical_and_expr)*
+logical_and_expr: equality_expr (AND_OP equality_expr)*
+equality_expr: relational_expr ((EQ_OP | NEQ_OP) relational_expr)*
+relational_expr: additive_expr ((LT | LE | GT | GE) additive_expr)*
+additive_expr: multiplicative_expr ((PLUS | MINUS) multiplicative_expr)*
+multiplicative_expr: pre_expr ((STAR | SLASH | PERCENT) pre_expr)*
+pre_expr: (BANG | TILDE) pre_expr | primary_expr
+primary_expr: LPAREN expression RPAREN | operand
+operand: value
+value: literals
+     | typecast_expression
+     | id_usage
+literals: INTEGERLITERAL 
+        | FLOATLITERAL 
+        | STRINGLITERAL 
+        | STATELITERAL 
+        | NEGINTEGERLITERAL 
+        | NEGFLOATLITERAL 
+        | EMPTY
+
+typecast_expression: data_type LPAREN expression RPAREN
+data_type: INTEGER | POINT | STATE | TEXT
+
+func_definition: FUNC IDENTIFIER LPAREN param_list? RPAREN LBRACE program throw_statement? RBRACE
+param_list: IDENTIFIER (COMMA IDENTIFIER)*
+throw_statement: THROW expression SEMICOLON
+
+?statement: id_usage SEMICOLON
+          | show_statement SEMICOLON
+          | conditional_statement
+          | loop_statement
+
+show_statement: SHOW LPAREN expression RPAREN
+
+conditional_statement: checkif_statement | switch_statement
+checkif_statement: CHECKIF LPAREN expression RPAREN LBRACE program control_flow? RBRACE recheck_statement* otherwise_statement?
+recheck_statement: RECHECK LPAREN expression RPAREN LBRACE program control_flow? RBRACE
+otherwise_statement: OTHERWISE LBRACE program control_flow? RBRACE
+switch_statement: SWITCH LPAREN expression RPAREN LBRACE case_block+ default_block? RBRACE
+case_block: CASE expression COLON program EXIT SEMICOLON
+default_block: DEFAULT COLON program EXIT SEMICOLON
+
+loop_statement: each_statement | repeat_statement | do_repeat_statement
+each_statement: EACH LPAREN each_initialization SEMICOLON expression SEMICOLON expression RPAREN LBRACE program control_flow? RBRACE
+repeat_statement: REPEAT LPAREN expression RPAREN LBRACE program control_flow? RBRACE
+do_repeat_statement: DO LBRACE program control_flow? RBRACE REPEAT LPAREN expression RPAREN
+each_initialization: declaration | var_assign
+
+control_flow: ((EXIT SEMICOLON) | (NEXT SEMICOLON))+

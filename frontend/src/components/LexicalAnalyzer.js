@@ -18,16 +18,32 @@ const LexicalAnalyzer = ({ toggleSidebar, themeMode, toggleTheme }) => {
   const theme = useTheme();
 
   const handleAnalyze = () => {
-    axios
-      .post('http://localhost:5000/analyze', { code })
+    axios.post('http://localhost:5000/analyzeFull', { code })
       .then((response) => {
-        setTokens(response.data.tokens);
-        setErrors(response.data.errors);
+        const data = response.data;
+        setTokens(data.tokens);
+  
+        // Add type field to distinguish errors in Errors.js
+        const formattedLexicalErrors = data.lexicalErrors.map(error => ({
+          ...error,
+          type: 'lexical'  // Mark as lexical error
+        }));
+  
+        const formattedSyntaxErrors = data.syntaxErrors.map(error => ({
+          ...error,
+          type: 'syntax'  // Mark as syntax error
+        }));
+  
+        // Set errors with type distinction
+        setErrors([...formattedLexicalErrors, ...formattedSyntaxErrors]);
       })
       .catch((error) => {
-        console.error('Error analyzing code:', error);
+        console.error('Unexpected error', error);
       });
   };
+  
+  
+  
 
   const handleClear = () => {
     setCode('');

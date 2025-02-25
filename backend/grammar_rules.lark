@@ -1,0 +1,25 @@
+%import common.WS
+%import common.NEWLINE
+%ignore WS
+
+start: program
+
+EQUAL: "=="
+SHOW: "show"
+
+program: initialization
+
+initialization: IDENTIFIER "=" value ";"
+            | INTEGERLITERAL EQUAL INTEGERLITERAL ";"
+
+value: INTEGERLITERAL | TEXTLITERAL | IDENTIFIER | POINTLITERAL | STATELITERAL
+
+POINTLITERAL: /(\d+,\d+)/
+
+TEXTLITERAL: /"[^"]*"/
+
+STATELITERAL: "YES" | "NO"
+
+IDENTIFIER: /[a-zA-Z_][a-zA-Z0-9_]*/
+
+INTEGERLITERAL: /[0-9]+/

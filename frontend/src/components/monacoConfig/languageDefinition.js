@@ -11,7 +11,7 @@ export const tokenizer = {
       // keywords & identifiers
       [/[a-z_$][\w$]*/, {
         cases: {
-          'get|show|integer|point|state|texts|group|checkif|recheck|otherwise|switch|each|repeat|do|exit|next|fixed|func|throw|case|default|YES|NO|empty': 'keyword',
+          'var|get|show|integer|point|state|text|group|checkif|recheck|otherwise|switch|each|repeat|do|exit|next|fixed|func|throw|case|default|YES|NO|empty': 'keyword',
           '@default': 'identifier'
         }
       }],
@@ -39,7 +39,7 @@ export const tokenizer = {
     ],
   },
   keywords: [
-    'get', 'show', 'integer', 'point', 'state', 'texts', 'group',
+    'var', 'get', 'show', 'integer', 'point', 'state', 'text', 'group',
     'checkif', 'recheck', 'otherwise', 'switch', 'each', 'repeat',
     'do', 'exit', 'next', 'fixed', 'func', 'throw', 'case', 'default',
     'YES', 'NO', 'empty'

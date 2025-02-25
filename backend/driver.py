@@ -1,4 +1,4 @@
-from lexer import Lexer
+from backend.minima_lexer import Lexer
 
 def main():
     code = """# TEST CODE

@@ -1,5 +1,3 @@
-# fsm_lexer.py
-
 from tokens import Token as T
 from errors import (
     InvalidIdentifierError,
@@ -171,11 +169,17 @@ class Lexer:
 
         # ----- Starts with 't' -----
         if value[0] == 't':
-            # Could be "texts", "throw"
-            if len(value) == 5 and value[1] == 'e' and value[2] == 'x' and value[3] == 't' and value[4] == 's':
-                return 'texts'
+            # Could be "text", "throw"
+            if len(value) == 4 and value[1] == 'e' and value[2] == 'x' and value[3] == 't':
+                return 'text'
             elif len(value) == 5 and value[1] == 'h' and value[2] == 'r' and value[3] == 'o' and value[4] == 'w':
                 return 'throw'
+        
+        # ----- Starts with 'v' -----
+        if value[0] == 'v':
+            #could be "var"
+            if len(value) == 3 and value[1] == 'a' and value[2] == 'r':
+                return 'var'
 
         # ----- Starts with 'Y' -----
         if value[0] == 'Y':
@@ -730,34 +734,34 @@ class Lexer:
             self.errors.append(error)
             self.current_state = LexerState.INITIAL
             # CHANGED
-            return T('INVALID', first_char, start_line, start_column, error="Invalid symbol")
+            return self.get_next_token()
 
         # Now we have the symbol. Validate the delimiter
-        # if symbol:
-        #     valid_delims = valid_delimiters_symbol_dict.get(symbol, [])
-        #     if self.current_char is not None:
-        #         two_char = self.current_char
-        #         if self.peek_next_char():
-        #             two_char += self.peek_next_char()
-        #         if (self.current_char not in valid_delims and
-        #             two_char not in valid_delims):
-        #             msg = f"Invalid delimiter after symbol '{symbol}': '{self.current_char}'"
-        #             error = InvalidSymbolError(self.current_char, self.line, self.column)
-        #             error.message = msg
-        #             self.errors.append(error)
-        #             self.current_state = LexerState.INITIAL
-        #             return self.get_next_token()
-
         if symbol:
             valid_delims = valid_delimiters_symbol_dict.get(symbol, [])
             if self.current_char is not None:
-                if (self.current_char not in valid_delims):
+                two_char = self.current_char
+                if self.peek_next_char():
+                    two_char += self.peek_next_char()
+                if (self.current_char not in valid_delims and
+                    two_char not in valid_delims):
                     msg = f"Invalid delimiter after symbol '{symbol}': '{self.current_char}'"
                     error = InvalidSymbolError(self.current_char, self.line, self.column)
                     error.message = msg
                     self.errors.append(error)
                     self.current_state = LexerState.INITIAL
                     return self.get_next_token()
+
+        # if symbol:
+        #     valid_delims = valid_delimiters_symbol_dict.get(symbol, [])
+        #     if self.current_char is not None:
+        #         if (self.current_char not in valid_delims):
+        #             msg = f"Invalid delimiter after symbol '{symbol}': '{self.current_char}'"
+        #             error = InvalidSymbolError(self.current_char, self.line, self.column)
+        #             error.message = msg
+        #             self.errors.append(error)
+        #             self.current_state = LexerState.INITIAL
+        #             return self.get_next_token()
 
             self.current_state = LexerState.INITIAL
             return T(symbol, symbol, start_line, start_column)

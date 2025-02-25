@@ -4,6 +4,7 @@ export const provideCompletionItems = (monacoInstance) => {
     return {
       provideCompletionItems: () => {
         const suggestions = [
+          { label: 'var', kind: monacoInstance.languages.CompletionItemKind.Keyword, insertText: 'var' },
           { 
             label: 'get', 
             kind: monacoInstance.languages.CompletionItemKind.Keyword, 
@@ -35,9 +36,9 @@ export const provideCompletionItems = (monacoInstance) => {
             insertTextRules: monacoInstance.languages.CompletionItemInsertTextRule.InsertAsSnippet 
           },
           { 
-            label: 'texts', 
+            label: 'text', 
             kind: monacoInstance.languages.CompletionItemKind.Keyword, 
-            insertText: 'texts(${1:})', 
+            insertText: 'text(${1:})', 
             insertTextRules: monacoInstance.languages.CompletionItemInsertTextRule.InsertAsSnippet 
           },
           { 
