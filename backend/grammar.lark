@@ -65,7 +65,7 @@ POINT: "point"
 STATE: "state"
 TEXT: "text"
 
-IDENTIFIER:/(?!(?:var|fixed|group|func|throw|show|checkif|recheck|otherwise|switch|case|default|exit|next|each|repeat|do|integer|point|state|text|empty)(?![a-zA-Z0-9_]))(?:get|[a-z][a-zA-Z0-9_]{0,19})/
+IDENTIFIER: /(?!(?:var|fixed|group|func|throw|show|checkif|recheck|otherwise|switch|case|default|exit|next|each|repeat|do|integer|point|state|text|empty|get)(?![a-zA-Z0-9_]))[a-z][a-zA-Z0-9_]*/
 INTEGERLITERAL: /[0-9]{1,9}/
 FLOATLITERAL: /[0-9]{1,9}\.[0-9]{1,9}/
 NEGINTEGERLITERAL: /~[0-9]{1,9}/
@@ -88,7 +88,7 @@ var_list_declaration_tail: COMMA IDENTIFIER var_init?
 fixed_declaration: FIXED IDENTIFIER ASSIGN variable_value fixed_declaration_tail* SEMICOLON
 fixed_declaration_tail: COMMA IDENTIFIER ASSIGN variable_value
 
-group_declaration: GROUP IDENTIFIER LBRACE group_members RBRACE
+group_declaration: GROUP IDENTIFIER LBRACE group_members RBRACE SEMICOLON?
 group_members: member (COMMA member)*
 member: expression COLON expression
 
@@ -106,8 +106,11 @@ list_value: expression (COMMA expression)*
 ?id_usage: modifiable_lvalue unary_op?
          | IDENTIFIER func_call
 
-?id_usage_statement: modifiable_lvalue unary_op
-                    | IDENTIFIER func_call
+?id_statement: statement_func_call SEMICOLON
+                    | id_statement_unary SEMICOLON
+
+statement_func_call: IDENTIFIER func_call 
+id_statement_unary: IDENTIFIER group_or_list unary_op 
 
 group_or_list: (LSQB expression RSQB) | (LBRACE expression RBRACE)
 unary_op: INC_OP | DEC_OP
@@ -144,7 +147,7 @@ function_program: (declaration | var_assign | statement)*
 param_list: IDENTIFIER (COMMA IDENTIFIER)*
 throw_statement: THROW expression SEMICOLON
 
-?statement: id_usage_statement SEMICOLON
+?statement: id_statement 
           | show_statement SEMICOLON
           | conditional_statement
           | loop_statement

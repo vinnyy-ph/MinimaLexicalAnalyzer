@@ -1,4 +1,3 @@
-#syntax_errors.py
 def process_syntax_error(
     error_msg: str,
     line: int = 0,
@@ -10,63 +9,47 @@ def process_syntax_error(
     if expected_tokens is None:
         expected_tokens = []
 
-    # Helper: checks if there's an unmatched bracket of a certain kind
+    messages = []
+
+    # Helper: check for unmatched bracket up to the error column.
     def has_unmatched(opening, closing):
         stack_count = 0
-        for ch in code[:column]:
+        # Use code up to (column-1) because column is 1-indexed.
+        for ch in code[:max(column-1, 0)]:
             if ch == opening:
                 stack_count += 1
             elif ch == closing and stack_count > 0:
                 stack_count -= 1
         return stack_count > 0
 
-    # If we detect unmatched parentheses/brackets/braces, report them.
-    # Otherwise, just return the full expected tokens list.
-    if "RSQB" in expected_tokens:
-        # Check if there's an unmatched '[' in the code before this point
-        if has_unmatched('[', ']'):
-            return {
-                "message": "Missing closing square bracket ']'",
-                "rawMessage": error_msg,
-                "expected": expected_tokens,
-                "unexpected": unexpected_token,
-                "line": line,
-                "column": column,
-                "value": ""
-            }
+    # # Here we assume that if SEMICOLON (or ";" token) is in expected_tokens, then a semicolon might be missing.
+    # if ("SEMICOLON" in expected_tokens or ";" in expected_tokens):
+    #     # A simple heuristic: if the trimmed code does not end with a semicolon.
+    #     if not code.rstrip().endswith(";"):
+    #         messages.append("Missing semicolon ';'")
 
-    if "RBRACE" in expected_tokens:
-        # Check if there's an unmatched '{'
-        if has_unmatched('{', '}'):
-            return {
-                "message": "Missing closing brace '}'",
-                "rawMessage": error_msg,
-                "expected": expected_tokens,
-                "unexpected": unexpected_token,
-                "line": line,
-                "column": column,
-                "value": ""
-            }
+    # Filter expected tokens: only include a closing token if its corresponding opening appears in the code
+    def has_left(opening):
+        return opening in code[:max(column-1, 0)]
 
-    if "RPAREN" in expected_tokens:
-        # Check if there's an unmatched '('
-        if has_unmatched('(', ')'):
-            return {
-                "message": "Missing closing parenthesis ')'",
-                "rawMessage": error_msg,
-                "expected": expected_tokens,
-                "unexpected": unexpected_token,
-                "line": line,
-                "column": column,
-                "value": ""
-            }
+    filtered_expected = []
+    for token in expected_tokens:
+        if token in {"RSQB", "]"} and not has_left('['):
+            continue
+        if token in {"RBRACE", "}"} and not has_left('{'):
+            continue
+        if token in {"RPAREN", ")"} and not has_left('('):
+            continue
+        filtered_expected.append(token)
 
-    # If no real unmatched bracket was found, or there's no other special case,
-    # just list all of the expected tokens.
+    # Always include the full expected tokens for context (filtered)
+    messages.append("Expected tokens: " + ", ".join(filtered_expected))
+    
+    final_message = " ".join(messages)
     return {
-        "message": "Expected tokens: " + ", ".join(expected_tokens),
+        "message": final_message,
         "rawMessage": error_msg,
-        "expected": expected_tokens,
+        "expected": filtered_expected,
         "unexpected": unexpected_token,
         "line": line,
         "column": column,
