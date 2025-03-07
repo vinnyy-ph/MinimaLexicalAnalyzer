@@ -14,8 +14,7 @@ def process_syntax_error(
     # Helper: check for unmatched bracket up to the error column.
     def has_unmatched(opening, closing):
         stack_count = 0
-        # Use code up to (column-1) because column is 1-indexed.
-        for ch in code[:max(column-1, 0)]:
+        for ch in code:  # use full code instead of code[:max(column-1, 0)]
             if ch == opening:
                 stack_count += 1
             elif ch == closing and stack_count > 0:
@@ -34,11 +33,11 @@ def process_syntax_error(
 
     filtered_expected = []
     for token in expected_tokens:
-        if token in {"RSQB", "]"} and not has_left('['):
+        if token in {"RSQB", "]"} and not has_unmatched('[', ']'):
             continue
-        if token in {"RBRACE", "}"} and not has_left('{'):
+        if token in {"RBRACE", "}"} and not has_unmatched('{', '}'):
             continue
-        if token in {"RPAREN", ")"} and not has_left('('):
+        if token in {"RPAREN", ")"} and not has_unmatched('(', ')'):
             continue
         filtered_expected.append(token)
 

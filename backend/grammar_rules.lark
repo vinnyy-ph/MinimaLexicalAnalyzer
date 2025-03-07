@@ -1,25 +1,12 @@
-%import common.WS
-%import common.NEWLINE
-%ignore WS
+?statement: show_statement SEMICOLON
+        | conditional_statement
+        | loop_statement 
+        | expression SEMICOLON
 
-start: program
+?statement: id_statement 
+          | show_statement SEMICOLON
+          | conditional_statement
+          | loop_statement
+          | func_call_stmt
 
-EQUAL: "=="
-SHOW: "show"
-
-program: initialization
-
-initialization: IDENTIFIER "=" value ";"
-            | INTEGERLITERAL EQUAL INTEGERLITERAL ";"
-
-value: INTEGERLITERAL | TEXTLITERAL | IDENTIFIER | POINTLITERAL | STATELITERAL
-
-POINTLITERAL: /(\d+,\d+)/
-
-TEXTLITERAL: /"[^"]*"/
-
-STATELITERAL: "YES" | "NO"
-
-IDENTIFIER: /[a-zA-Z_][a-zA-Z0-9_]*/
-
-INTEGERLITERAL: /[0-9]+/
+func_call_stmt: IDENTIFIER LPAREN args? RPAREN SEMICOLON

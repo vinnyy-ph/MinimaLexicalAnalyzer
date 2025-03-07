@@ -58,7 +58,6 @@ TOKEN_MAP = {
     "MOD_ASSIGN": "%=",
     "COMMA": ",",
     "COLON": ":",
-    # The token for semicolon appears twice in your map; that’s fine.
 }
 
 parser = Lark.open("grammar.lark", start="start", parser="lalr")

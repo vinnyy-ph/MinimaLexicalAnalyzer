@@ -103,8 +103,8 @@ assign_op: ASSIGN | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | DIV_ASSIGN
 get_expr: GET LPAREN expression RPAREN | GET LPAREN RPAREN
 list_value: expression (COMMA expression)*
 
-?id_usage: modifiable_lvalue unary_op?
-         | IDENTIFIER func_call
+?id_usage: IDENTIFIER func_call
+         | modifiable_lvalue unary_op?
 
 ?id_statement: statement_func_call SEMICOLON
                     | id_statement_unary SEMICOLON
@@ -147,16 +147,16 @@ function_program: (declaration | var_assign | statement)*
 param_list: IDENTIFIER (COMMA IDENTIFIER)*
 throw_statement: THROW expression SEMICOLON
 
-?statement: id_statement 
-          | show_statement SEMICOLON
-          | conditional_statement
-          | loop_statement
+?statement: show_statement SEMICOLON
+        | conditional_statement
+        | loop_statement 
+        | expression SEMICOLON
 
 show_statement: SHOW LPAREN expression RPAREN
 
 conditional_statement: checkif_statement | switch_statement
-checkif_statement: CHECKIF LPAREN expression RPAREN LBRACE program control_flow? RBRACE recheck_statement* otherwise_statement?
-recheck_statement: RECHECK LPAREN expression RPAREN LBRACE program control_flow? RBRACE
+checkif_statement: CHECKIF LPAREN expression RPAREN LBRACE program RBRACE recheck_statement* otherwise_statement?
+recheck_statement: RECHECK LPAREN expression RPAREN LBRACE program RBRACE
 otherwise_statement: OTHERWISE LBRACE program control_flow? RBRACE
 switch_statement: SWITCH LPAREN expression RPAREN LBRACE case_block* default_block? RBRACE
 case_block: CASE expression COLON case_block_tail
@@ -167,7 +167,7 @@ loop_statement: each_statement | repeat_statement | do_repeat_statement
 each_statement: EACH LPAREN each_initialization expression SEMICOLON (expression|var_assign_each) RPAREN LBRACE program control_flow? RBRACE
 var_assign_each: IDENTIFIER assign_op expression
 repeat_statement: REPEAT LPAREN expression RPAREN LBRACE program control_flow? RBRACE
-do_repeat_statement: DO LBRACE program control_flow? RBRACE REPEAT LPAREN expression RPAREN
+do_repeat_statement: DO LBRACE program control_flow? RBRACE REPEAT LPAREN expression RPAREN SEMICOLON
 each_initialization: declaration | var_assign
 
 control_flow: ((EXIT SEMICOLON) | (NEXT SEMICOLON))+
