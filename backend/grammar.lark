@@ -142,7 +142,7 @@ literals: INTEGERLITERAL
 typecast_expression: data_type LPAREN expression RPAREN
 data_type: INTEGER | POINT | STATE | TEXT
 
-func_definition: FUNC IDENTIFIER LPAREN param_list? RPAREN LBRACE function_program throw_statement? RBRACE
+func_definition: FUNC IDENTIFIER LPAREN param_list? RPAREN LBRACE function_program throw_statement? RBRACE SEMICOLON?
 function_program: (declaration | var_assign | statement)*
 param_list: IDENTIFIER (COMMA IDENTIFIER)*
 throw_statement: THROW expression SEMICOLON
