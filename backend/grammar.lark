@@ -139,7 +139,7 @@ literals: INTEGERLITERAL
         | NEGFLOATLITERAL 
         | EMPTY
 
-typecast_expression: data_type LPAREN expression RPAREN
+typecast_expression: data_type LPAREN (expression|get_expr) RPAREN
 data_type: INTEGER | POINT | STATE | TEXT
 
 func_definition: FUNC IDENTIFIER LPAREN param_list? RPAREN LBRACE function_program throw_statement? RBRACE SEMICOLON?
@@ -152,7 +152,7 @@ throw_statement: THROW expression SEMICOLON
         | loop_statement 
         | expression SEMICOLON
 
-show_statement: SHOW LPAREN expression RPAREN
+show_statement: SHOW LPAREN (expression | ) RPAREN
 
 conditional_statement: checkif_statement | switch_statement
 checkif_statement: CHECKIF LPAREN expression RPAREN LBRACE program RBRACE recheck_statement* otherwise_statement?
