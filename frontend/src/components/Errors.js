@@ -4,7 +4,8 @@ import { Alert, AlertTitle, Box, Typography, Tabs, Tab, useTheme } from '@mui/ma
 const Errors = ({ errors }) => {
   const theme = useTheme();
   const boxRef = useRef(null);
-  const [tabIndex, setTabIndex] = useState(0); // 0 = Lexical, 1 = Syntax
+  // 0: Lexical, 1: Syntax, 2: Semantic
+  const [tabIndex, setTabIndex] = useState(0);
 
   useEffect(() => {
     if (boxRef.current) {
@@ -12,15 +13,17 @@ const Errors = ({ errors }) => {
     }
   }, [errors, tabIndex]);
 
-  // Separate errors into lexical and syntax categories
+  // Separate errors into lexical, syntax, and semantic categories
   const lexicalErrors = errors.filter((error) => error.type === 'lexical');
   const syntaxErrors = errors.filter((error) => error.type === 'syntax');
+  const semanticErrors = errors.filter((error) => error.type === 'semantic');
 
   const handleTabChange = (event, newIndex) => {
     setTabIndex(newIndex);
   };
 
-  const currentErrors = tabIndex === 0 ? lexicalErrors : syntaxErrors;
+  const currentErrors =
+    tabIndex === 0 ? lexicalErrors : tabIndex === 1 ? syntaxErrors : semanticErrors;
   const hasErrors = currentErrors.length > 0;
 
   // Dynamically choose colors based on whether there are errors
@@ -31,7 +34,6 @@ const Errors = ({ errors }) => {
   // Renders the separate bullet points for each category
   const renderExpectedCategories = (error) => {
     const { literals, keywords, symbols, others } = error;
-    // If all are empty, don’t show anything
     if (!literals?.length && !keywords?.length && !symbols?.length && !others?.length) {
       return null;
     }
@@ -80,11 +82,10 @@ const Errors = ({ errors }) => {
         width: '100%',
         padding: 2,
         borderRadius: 2,
-        backgroundColor: '#001524', // CLI-like background
+        backgroundColor: '#001524',
         color: '#d4d4d4',
         fontFamily: 'Menlo, Monaco, Consolas, "Courier New", monospace',
         boxShadow: 1,
-        // Custom scrollbar style
         '&::-webkit-scrollbar': { width: '10px' },
         '&::-webkit-scrollbar-track': { background: '#2e2e2e', borderRadius: '4px' },
         '&::-webkit-scrollbar-thumb': {
@@ -95,7 +96,7 @@ const Errors = ({ errors }) => {
         '&::-webkit-scrollbar-thumb:hover': { backgroundColor: '#777' },
       }}
     >
-      {/* Tabs for Lexical & Syntax Errors */}
+      {/* Tabs for Lexical, Syntax & Semantic Errors */}
       <Tabs
         value={tabIndex}
         onChange={handleTabChange}
@@ -115,6 +116,7 @@ const Errors = ({ errors }) => {
       >
         <Tab label={`Lexical Errors (${lexicalErrors.length})`} />
         <Tab label={`Syntax Errors (${syntaxErrors.length})`} />
+        <Tab label={`Semantic Errors (${semanticErrors.length})`} />
       </Tabs>
 
       {/* Error Display */}
@@ -130,35 +132,42 @@ const Errors = ({ errors }) => {
           {hasErrors
             ? tabIndex === 0
               ? 'Lexical Errors'
-              : 'Syntax Errors'
+              : tabIndex === 1
+              ? 'Syntax Errors'
+              : 'Semantic Errors'
             : 'You understand Minima, Good Job!'}
         </AlertTitle>
 
         {hasErrors ? (
           <ul style={{ listStyleType: 'none', paddingLeft: 0, margin: 0 }}>
-            {currentErrors.map((error, index) => (
-              <li key={index} style={{ marginBottom: '0.5rem' }}>
-                <Typography variant="body1">
-                  <span style={{ color: arrowColor, marginRight: '8px' }}>➜</span>
-                  <strong>{error.message || 'Error'}:</strong>{' '}
-                  (Line {error.line || '??'}, Col {error.column || '??'})
-                </Typography>
-
-                {/* Unexpected token */}
-                {error.unexpected && (
-                  <Typography
-                    variant="body2"
-                    sx={{ marginLeft: '16px', fontSize: '0.9rem', color: secondaryTextColor }}
-                  >
-                    <span style={{ color: arrowColor, marginRight: '8px' }}>•</span>
-                    Unexpected token: {error.unexpected}
+            {currentErrors.map((error, index) => {
+              // Ensure error.message is a string.
+              const message =
+                error.message && typeof error.message === 'object'
+                  ? JSON.stringify(error.message)
+                  : error.message || 'Error';
+              return (
+                <li key={index} style={{ marginBottom: '0.5rem' }}>
+                  <Typography variant="body1">
+                    <span style={{ color: arrowColor, marginRight: '8px' }}>➜</span>
+                    <strong>{message}:</strong>{' '}
+                    (Line {error.line || '??'}, Col {error.column || '??'})
                   </Typography>
-                )}
 
-                {/* Render categories */}
-                {renderExpectedCategories(error)}
-              </li>
-            ))}
+                  {error.unexpected && (
+                    <Typography
+                      variant="body2"
+                      sx={{ marginLeft: '16px', fontSize: '0.9rem', color: secondaryTextColor }}
+                    >
+                      <span style={{ color: arrowColor, marginRight: '8px' }}>•</span>
+                      Unexpected token: {error.unexpected}
+                    </Typography>
+                  )}
+
+                  {renderExpectedCategories(error)}
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <Typography variant="body2" sx={{ color: secondaryTextColor }}>

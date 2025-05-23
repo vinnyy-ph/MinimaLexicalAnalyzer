@@ -65,7 +65,7 @@ parser = Lark.open("grammar.lark", start="start", parser="lalr")
 def analyze_syntax(code):
     try:
         parse_tree = parser.parse(code)
-        return (True, None)
+        return (True, parse_tree)
     except UnexpectedToken as ut:
         line = ut.line
         column = ut.column

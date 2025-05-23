@@ -9,7 +9,7 @@ import { Grid, Box, Typography, IconButton, useTheme } from '@mui/material';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 
-const LexicalAnalyzer = ({ toggleSidebar, themeMode, toggleTheme }) => {
+const Analyzer = ({ toggleSidebar, themeMode, toggleTheme }) => {
   const [code, setCode] = useState('');
   const [tokens, setTokens] = useState([]);
   const [errors, setErrors] = useState([]);
@@ -19,27 +19,35 @@ const LexicalAnalyzer = ({ toggleSidebar, themeMode, toggleTheme }) => {
 
   const handleAnalyze = () => {
     axios.post('http://localhost:5000/analyzeFull', { code })
-      .then((response) => {
-        const data = response.data;
-        setTokens(data.tokens);
+    .then((response) => {
+      const data = response.data;
+      setTokens(data.tokens);
   
-        // Add type field to distinguish errors in Errors.js
-        const formattedLexicalErrors = data.lexicalErrors.map(error => ({
-          ...error,
-          type: 'lexical'  // Mark as lexical error
-        }));
+      const formattedLexicalErrors = data.lexicalErrors.map(error => ({
+        ...error,
+        type: 'lexical'
+      }));
   
-        const formattedSyntaxErrors = data.syntaxErrors.map(error => ({
-          ...error,
-          type: 'syntax'  // Mark as syntax error
-        }));
+      const formattedSyntaxErrors = data.syntaxErrors.map(error => ({
+        ...error,
+        type: 'syntax'
+      }));
+      
+      const formattedSemanticErrors = data.semanticErrors.map(error => ({
+        ...error,
+        type: 'semantic'
+      }));
   
-        // Set errors with type distinction
-        setErrors([...formattedLexicalErrors, ...formattedSyntaxErrors]);
-      })
-      .catch((error) => {
-        console.error('Unexpected error', error);
-      });
+      setErrors([
+        ...formattedLexicalErrors,
+        ...formattedSyntaxErrors,
+        ...formattedSemanticErrors
+      ]);
+    })
+    .catch((error) => {
+      console.error('Unexpected error', error);
+    });
+  
   };
   
   
@@ -212,4 +220,4 @@ const LexicalAnalyzer = ({ toggleSidebar, themeMode, toggleTheme }) => {
   );
 };
 
-export default LexicalAnalyzer;
+export default Analyzer;

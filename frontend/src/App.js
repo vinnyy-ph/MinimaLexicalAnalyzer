@@ -6,7 +6,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { darkTheme } from './theme';
 import lightTheme from './themeLight'; // Import the light theme
 import Sidebar from './components/Sidebar';
-import LexicalAnalyzer from './components/LexicalAnalyzer';
+import Analyzer from './components/Analyzer';
 import { Box, IconButton } from '@mui/material';
 import Brightness4Icon from '@mui/icons-material/Brightness4'; // Icon for dark mode
 import Brightness7Icon from '@mui/icons-material/Brightness7'; // Icon for light mode
@@ -39,7 +39,7 @@ const App = () => {
             {themeMode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
           </IconButton> */}
 
-          <LexicalAnalyzer 
+          <Analyzer 
             toggleSidebar={toggleDrawer} 
             themeMode={themeMode}      // Pass themeMode
             toggleTheme={toggleTheme} // Pass toggleTheme

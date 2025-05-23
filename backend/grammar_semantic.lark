@@ -1,0 +1,274 @@
+%import common.WS
+%ignore WS
+%ignore /\n/
+%ignore /#.*/
+
+LBRACE: "{"
+RBRACE: "}"
+LSQB: "["
+RSQB: "]"
+LPAREN: "("
+RPAREN: ")"
+
+VAR: "var"
+FIXED: "fixed"
+GROUP: "group"
+GET: "get"
+THROW: "throw"
+SHOW: "show"
+CHECKIF: "checkif"
+RECHECK: "recheck"
+OTHERWISE: "otherwise"
+SWITCH: "switch"
+CASE: "case"
+DEFAULT: "default"
+EXIT: "exit"
+NEXT: "next"
+EACH: "each"
+REPEAT: "repeat"
+DO: "do"
+EMPTY: "empty"
+FUNC: "func"
+
+OR_OP: "||"
+AND_OP: "&&"
+EQ_OP: "=="
+NEQ_OP: "!="
+LT: "<"
+LE: "<="
+GT: ">"
+GE: ">="
+
+PLUS: "+"
+MINUS: "-"
+STAR: "*"
+SLASH: "/"
+PERCENT: "%"
+
+BANG: "!"
+TILDE: "~"
+INC_OP: "++"
+DEC_OP: "--"
+
+ASSIGN: "="
+ADD_ASSIGN: "+="
+SUB_ASSIGN: "-="
+MUL_ASSIGN: "*="
+DIV_ASSIGN: "/="
+
+COMMA: ","
+COLON: ":"
+SEMICOLON: ";"
+
+INTEGER: "integer"
+POINT: "point"
+STATE: "state"
+TEXT: "text"
+
+IDENTIFIER: /[a-z][a-zA-Z0-9_]*/
+INTEGERLITERAL: /[0-9]{1,9}/
+POINTLITERAL: /[0-9]{1,9}\.[0-9]{1,9}/
+NEGINTEGERLITERAL: /~[0-9]{1,9}/
+NEGPOINTLITERAL: /~[0-9]{1,9}\.[0-9]{1,9}/
+TEXTLITERAL: /"[^"]*"/
+STATELITERAL: "YES" | "NO"
+
+?start: program
+
+program: declarations program
+       | func_definition program
+       | statements program
+       | 
+
+declarations: varlist_declaration
+            | fixed_declaration
+            | group_declaration
+            | 
+
+varlist_declaration: "var" IDENTIFIER var_init varlist_tail ";" 
+varlist_tail: "," IDENTIFIER var_init varlist_tail
+            | 
+
+fixed_declaration: "fixed" IDENTIFIER "=" variable_value fixed_tail ";" 
+fixed_tail: "," IDENTIFIER "=" variable_value fixed_tail
+          | 
+
+group_declaration: "group" IDENTIFIER "{" group_members "}" ";" 
+group_members: member_value ":" member_value member_tail
+member_value: expression
+member_tail: "," group_members
+           | 
+
+var_init: "=" variable_value
+        | 
+
+variable_value: "[" list_value "]"
+              | expression
+              | "get" "(" expression ")"
+
+list_value: expression list_tail
+list_tail: "," expression list_tail
+         | 
+
+id_usage: IDENTIFIER id_usagetail
+id_usagetail: group_or_list unary_op
+           | func_call
+
+func_call: "(" args ")"
+
+group_or_list: "[" expression "]"
+             | "{" expression "}"
+             | 
+
+unary_op: "++"
+        | "--"
+        | 
+
+assign_op: "+="
+         | "-="
+         | "*="
+         | "/="
+
+expression: logical_or_expr
+
+logical_or_expr: logical_and_expr logical_or_expr_tail
+logical_or_expr_tail: "||" logical_and_expr logical_or_expr_tail
+                    | 
+
+logical_and_expr: equality_expr logical_and_expr_tail
+logical_and_expr_tail: "&&" equality_expr logical_and_expr_tail
+                     | 
+
+equality_expr: relational_expr equality_expr_tail
+equality_expr_tail: "==" relational_expr equality_expr_tail
+                  | "!=" relational_expr equality_expr_tail
+                  | 
+
+relational_expr: add_expr relational_expr_tail
+relational_expr_tail: "<" add_expr relational_expr_tail
+                    | ">" add_expr relational_expr_tail
+                    | "<=" add_expr relational_expr_tail
+                    | ">=" add_expr relational_expr_tail
+                    | 
+
+add_expr: mul_expr add_expr_tail
+add_expr_tail: "+" mul_expr add_expr_tail
+             | "-" mul_expr add_expr_tail
+             | 
+
+mul_expr: pre_expr mul_expr_tail
+mul_expr_tail: "*" pre_expr mul_expr_tail
+             | "/" pre_expr mul_expr_tail
+             | "%" pre_expr mul_expr_tail
+             | 
+
+pre_expr: "!" pre_expr
+        | "~" pre_expr
+        | primary_expr
+
+primary_expr: "(" expression ")"
+            | operand
+
+operand: literals
+       | typecast_expression
+       | id_usage
+
+literals: TEXTLITERAL
+        | POINTLITERAL
+        | INTEGERLITERAL
+        | NEGPOINTLITERAL
+        | NEGINTEGERLITERAL
+        | "YES"
+        | "NO"
+
+typecast_expression: data_type "(" expression ")"
+
+data_type: "integer"
+         | "point"
+         | "state"
+         | "text"
+
+func_definition: "func" IDENTIFIER "(" param ")" "{" function_prog throw_statement "}" ";" 
+               | 
+
+function_prog: declarations function_prog
+             | statements function_prog
+             | 
+
+param: IDENTIFIER param_tail
+     | 
+
+param_tail: "," IDENTIFIER param_tail
+          | 
+
+throw_statement: "throw" expression ";" 
+               | 
+
+args: expression args_tail
+    | 
+
+args_tail: "," args args_tail
+         | 
+
+statements: var_assign ";"
+          | expression ";"
+          | show_statement ";"
+          | conditional_statement
+          | loop_statement
+          | 
+
+conditional_statement: checkif_statement
+                     | switch_statement
+
+show_statement: "show" "(" expression ")"
+
+loop_statement: each_statement
+              | repeat_statement
+              | do_repeat_statement
+
+var_assign: IDENTIFIER group_or_list assign_op variable_value
+
+each_statement: "each" "(" each_initialization expressions ";" expressions ")" "{" loop_block "}"
+repeat_statement: "repeat" "(" expressions ")" "{" loop_block "}" ";" 
+do_repeat_statement: "do" "{" loop_block "}" "repeat" "(" expressions ")" ";"
+
+each_initialization: varlist_declaration
+                   | id_statement
+
+id_statement: IDENTIFIER
+
+control_flow: "exit" ";" 
+            | "next" ";" 
+            | 
+
+checkif_statement: "checkif" "(" expressions ")" "{" checkif_block "}" recheck_statement otherwise_statement
+
+recheck_statement: "recheck" "(" expressions ")" "{" checkif_block "}" recheck_statement
+                 | 
+
+otherwise_statement: "otherwise" "{" statements "}"
+                   | 
+
+switch_statement: "switch" "(" switch_tail ")" "{" "case" case_block ":" switch_block "exit" ";" case_tail default "}"
+switch_tail: expression
+case_block: expression
+case_tail: "case:" case_block ":" switch_block "exit" ";" case_tail
+         | 
+default: "default:" statements "exit" ";" 
+       | 
+
+loop_block: declarations loop_block
+          | statements loop_block
+          | control_flow loop_block
+          | 
+
+checkif_block: declarations checkif_block
+             | statements checkif_block
+             | 
+
+switch_block: declarations switch_block
+            | statements switch_block
+            | "exit" ";" switch_block
+            | 
+
+expressions: expression
